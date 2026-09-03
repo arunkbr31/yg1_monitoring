@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | YG1 Monitoring{% endblock %}
+{% block content %}
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="badge"><img src="{{ url_for('static', filename='images/yg1_images.png') }}" alt="YG1 Logo"></div>
+            <div>
+                <h2>YG1 Monitor</h2>
+                <small>Rules & Discipline</small>
+            </div>
+        </div>
+        <nav>
+            <div class="nav-label">Main</div>
+            <a href="{{ url_for('dashboard') }}" class="active"><span class="icon">📊</span> <span>Dashboard</span></a>
+            <a href="{{ url_for('placements') }}"><span class="icon">📍</span> <span>Placements</span></a>
+            <a href="{{ url_for('rules') }}"><span class="icon">📋</span> <span>Rules</span></a>
+            <a href="{{ url_for('alerts') }}"><span class="icon">🔔</span> <span>Alerts</span></a>
+            {% if current_user.role == 'admin' %}
+            <div class="nav-label">Admin</div>
+            <a href="{{ url_for('users') }}"><span class="icon">👥</span> <span>Users</span></a>
+            {% endif %}
+        </nav>
+        <div class="user-box">
+            <div class="user-info">
+                <strong>{{ current_user.username }}</strong>
+                <span>{{ current_user.role|capitalize }} · {{ current_user.email }}</span>
+            </div>
+            <a href="{{ url_for('logout') }}" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; font-size:14px; color:#fca5a5; transition:background .2s;">
+                <span class="icon">🚪</span> <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1>Dashboard</h1>
+                <p>Company rules & discipline monitoring overview</p>
+            </div>
+            <div class="actions">
+                <a href="{{ url_for('add_placement') }}" class="btn btn-primary">+ Add Placement</a>
+                <a href="{{ url_for('add_rule') }}" class="btn btn-outline">+ New Rule</a>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">Total Placements</div>
+                <div class="value">{{ counts.total }}</div>
+                <div class="sub">All monitored items</div>
+            </div>
+            <div class="stat-card green">
+                <div class="label">Compliant</div>
+                <div class="value">{{ counts.compliant }}</div>
+                <div class="sub">Following rules ✓</div>
+            </div>
+            <div class="stat-card red">
+                <div class="label">Violations</div>
+                <div class="value">{{ counts.violations }}</div>
+                <div class="sub">Items out of place</div>
+            </div>
+            <div class="stat-card amber">
+                <div class="label">Open Violations</div>
+                <div class="value">{{ counts.open }}</div>
+                <div class="sub">Awaiting action</div>
+            </div>
+            <div class="stat-card blue">
+                <div class="label">Closed Violations</div>
+                <div class="value">{{ counts.closed }}</div>
+                <div class="sub">Resolved ✓</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+            <div class="chart-box">
+                <h3>📈 Open vs Closed Violations</h3>
+                <canvas id="statusChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>✅ Compliance Overview</h3>
+                <canvas id="complianceChart"></canvas>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-box">
+                <h3>📊 Violations by Rule</h3>
+                <canvas id="ruleChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>🗓️ Weekly Trend (Last 7 Days)</h3>
+                <canvas id="weeklyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Recent Alerts -->
+        <div class="card">
+            <h3>🔔 Recent Alerts</h3>
+            {% if alerts %}
+            <div class="alerts-list">
+                {% for alert in alerts %}
+                <div class="alert-item {% if alert.acknowledged %}resolved{% endif %}">
+                    <div class="alert-icon">{% if alert.acknowledged %}✅{% else %}⚠️{% endif %}</div>
+                    <div class="alert-content">
+                        <strong>{{ alert.subject }}</strong>
+                        <span>{{ alert.message[:120] }}{% if alert.message|length > 120 %}...{% endif %}</span>
+                        <span style="display:block; margin-top:4px;">📧 {{ alert.coordinator_email }} · {{ alert.sent_at.strftime('%d %b %Y, %H:%M') }}</span>
+                    </div>
+                    <div class="alert-actions">
+                        {% if not alert.acknowledged %}
+                        <form method="POST" action="{{ url_for('acknowledge_alert', alert_id=alert.id) }}">
+                            <button type="submit" class="btn btn-success btn-sm">Acknowledge</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="icon">🔕</div>
+                <p>No alerts yet. Alerts will appear here when violations are detected.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Placements -->
+        <div class="card">
+            <h3>📍 Recent Placements</h3>
+            {% if placements %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Zone</th>
+                            <th>Current Location</th>
+                            <th>Required Location</th>
+                            <th>Responsible</th>
+                            <th>Status</th>
+                            <th>Compliance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in placements[:10] %}
+                        <tr>
+                            <td><strong>{{ p.rule.item }}</strong></td>
+                            <td>{{ p.zone }}</td>
+                            <td>{{ p.current_location }}</td>
+                            <td>{{ p.rule.required_location }}</td>
+                            <td>{{ p.responsible_person }}</td>
+                            <td>
+                                {% if p.status == 'open' %}
+                                <span class="badge badge-open">Open</span>
+                                {% else %}
+                                <span class="badge badge-closed">Closed</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if p.is_compliant %}
+                                <span class="badge badge-compliant">✓ Compliant</span>
+                                {% else %}
+                                <span class="badge badge-violation">✗ Violation</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="icon">📍</div>
+                <p>No placements recorded yet. <a href="{{ url_for('add_placement') }}" style="color:var(--primary); font-weight:600;">Add your first placement</a></p>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('{{ url_for("charts_data") }}')
+        .then(res => res.json())
+        .then(data => {
+            const counts = data.counts;
+
+            // 1. Open vs Closed Violations (Doughnut)
+            new Chart(document.getElementById('statusChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Open Violations', 'Closed Violations'],
+                    datasets: [{
+                        data: [counts.open, counts.closed],
+                        backgroundColor: ['#dc2626', '#16a34a'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // 2. Compliance Overview (Pie)
+            new Chart(document.getElementById('complianceChart'), {
+                type: 'pie',
+                data: {
+                    labels: ['Compliant', 'Violations'],
+                    datasets: [{
+                        data: [counts.compliant, counts.violations],
+                        backgroundColor: ['#16a34a', '#dc2626'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // 3. Violations by Rule (Bar)
+            const ruleLabels = data.rule_stats.map(r => r.rule);
+            const ruleViolations = data.rule_stats.map(r => r.violations);
+            const ruleCompliant = data.rule_stats.map(r => r.compliant);
+
+            new Chart(document.getElementById('ruleChart'), {
+                type: 'bar',
+                data: {
+                    labels: ruleLabels,
+                    datasets: [
+                        {
+                            label: 'Violations',
+                            data: ruleViolations,
+                            backgroundColor: '#dc2626',
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Compliant',
+                            data: ruleCompliant,
+                            backgroundColor: '#16a34a',
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // 4. Weekly Trend (Line)
+            const weekLabels = data.weekly.map(w => w.date);
+            const weekOpen = data.weekly.map(w => w.open);
+            const weekClosed = data.weekly.map(w => w.closed);
+
+            new Chart(document.getElementById('weeklyChart'), {
+                type: 'line',
+                data: {
+                    labels: weekLabels,
+                    datasets: [
+                        {
+                            label: 'Open',
+                            data: weekOpen,
+                            borderColor: '#dc2626',
+                            backgroundColor: 'rgba(220,38,38,.1)',
+                            fill: true,
+                            tension: .4,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Closed',
+                            data: weekClosed,
+                            borderColor: '#16a34a',
+                            backgroundColor: 'rgba(22,163,74,.1)',
+                            fill: true,
+                            tension: .4,
+                            pointRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        })
+        .catch(err => console.error('Chart data error:', err));
+});
+</script>
+{% endblock %}

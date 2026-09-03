@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Users | YG1 Monitoring{% endblock %}
+{% block content %}
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="badge"><img src="{{ url_for('static', filename='images/yg1_images.png') }}" alt="YG1 Logo"></div>
+            <div>
+                <h2>YG1 Monitor</h2>
+                <small>Rules & Discipline</small>
+            </div>
+        </div>
+        <nav>
+            <div class="nav-label">Main</div>
+            <a href="{{ url_for('dashboard') }}"><span class="icon">📊</span> <span>Dashboard</span></a>
+            <a href="{{ url_for('placements') }}"><span class="icon">📍</span> <span>Placements</span></a>
+            <a href="{{ url_for('rules') }}"><span class="icon">📋</span> <span>Rules</span></a>
+            <a href="{{ url_for('alerts') }}"><span class="icon">🔔</span> <span>Alerts</span></a>
+            <div class="nav-label">Admin</div>
+            <a href="{{ url_for('users') }}" class="active"><span class="icon">👥</span> <span>Users</span></a>
+        </nav>
+        <div class="user-box">
+            <div class="user-info">
+                <strong>{{ current_user.username }}</strong>
+                <span>{{ current_user.role|capitalize }} · {{ current_user.email }}</span>
+            </div>
+            <a href="{{ url_for('logout') }}" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; font-size:14px; color:#fca5a5; transition:background .2s;">
+                <span class="icon">🚪</span> <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1>User Management</h1>
+                <p>Manage system users and their access</p>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="card">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td><strong>{{ user.username }}</strong>{% if user.id == current_user.id %} <span style="font-size:11px; color:var(--text-light);">(you)</span>{% endif %}</td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                {% if user.role == 'admin' %}
+                                <span class="badge badge-admin">Admin</span>
+                                {% else %}
+                                <span class="badge badge-coordinator">Coordinator</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.is_active %}
+                                <span class="badge badge-active">Active</span>
+                                {% else %}
+                                <span class="badge badge-inactive">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user.created_at.strftime('%d %b %Y') if user.created_at else '—' }}</td>
+                            <td>
+                                {% if user.id != current_user.id %}
+                                <form method="POST" action="{{ url_for('deactivate_user', user_id=user.id) }}">
+                                    <button type="submit" class="btn btn-sm {% if user.is_active %}btn-warning{% else %}btn-success{% endif %}">
+                                        {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span style="font-size:12px; color:var(--text-light);">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}

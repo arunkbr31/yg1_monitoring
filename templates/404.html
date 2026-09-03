@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}404 Not Found | YG1 Monitoring{% endblock %}
+{% block content %}
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="badge"><img src="{{ url_for('static', filename='images/yg1_images.png') }}" alt="YG1 Logo"></div>
+            <div>
+                <h2>YG1 Monitor</h2>
+                <small>Rules & Discipline</small>
+            </div>
+        </div>
+        <nav>
+            <div class="nav-label">Main</div>
+            <a href="{{ url_for('dashboard') }}"><span class="icon">📊</span> <span>Dashboard</span></a>
+            <a href="{{ url_for('placements') }}"><span class="icon">📍</span> <span>Placements</span></a>
+            <a href="{{ url_for('rules') }}"><span class="icon">📋</span> <span>Rules</span></a>
+            <a href="{{ url_for('alerts') }}"><span class="icon">🔔</span> <span>Alerts</span></a>
+        </nav>
+    </aside>
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1>404 - Page Not Found</h1>
+                <p>The page you're looking for doesn't exist.</p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="empty-state">
+                <div class="icon">🔍</div>
+                <p><a href="{{ url_for('dashboard') }}" class="btn btn-primary">Return to Dashboard</a></p>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Rules | YG1 Monitoring{% endblock %}
+{% block content %}
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="badge"><img src="{{ url_for('static', filename='images/yg1_images.png') }}" alt="YG1 Logo"></div>
+            <div>
+                <h2>YG1 Monitor</h2>
+                <small>Rules & Discipline</small>
+            </div>
+        </div>
+        <nav>
+            <div class="nav-label">Main</div>
+            <a href="{{ url_for('dashboard') }}"><span class="icon">📊</span> <span>Dashboard</span></a>
+            <a href="{{ url_for('placements') }}"><span class="icon">📍</span> <span>Placements</span></a>
+            <a href="{{ url_for('rules') }}" class="active"><span class="icon">📋</span> <span>Rules</span></a>
+            <a href="{{ url_for('alerts') }}"><span class="icon">🔔</span> <span>Alerts</span></a>
+            {% if current_user.role == 'admin' %}
+            <div class="nav-label">Admin</div>
+            <a href="{{ url_for('users') }}"><span class="icon">👥</span> <span>Users</span></a>
+            {% endif %}
+        </nav>
+        <div class="user-box">
+            <div class="user-info">
+                <strong>{{ current_user.username }}</strong>
+                <span>{{ current_user.role|capitalize }} · {{ current_user.email }}</span>
+            </div>
+            <a href="{{ url_for('logout') }}" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; font-size:14px; color:#fca5a5; transition:background .2s;">
+                <span class="icon">🚪</span> <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1>Company Rules</h1>
+                <p>Define where items must be placed to maintain discipline</p>
+            </div>
+            <div class="actions">
+                <a href="{{ url_for('add_rule') }}" class="btn btn-primary">+ New Rule</a>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        {% if rules %}
+        <div class="rule-cards">
+            {% for rule in rules %}
+            <div class="rule-card">
+                <h4>{{ rule.rule_name }}</h4>
+                <div class="meta"><strong>Item:</strong> {{ rule.item }}</div>
+                <div class="meta"><strong>Required Location:</strong> {{ rule.required_location }}</div>
+                {% if rule.description %}
+                <div class="meta"><strong>Description:</strong> {{ rule.description }}</div>
+                {% endif %}
+                <div class="counts-inline">
+                    <span><span class="dot dot-green"></span> {{ rule.placements|selectattr('is_compliant')|list|length }} compliant</span>
+                    <span><span class="dot dot-red"></span> {{ rule.placements|rejectattr('is_compliant')|list|length }} violations</span>
+                </div>
+                <div class="rule-actions">
+                    <a href="{{ url_for('edit_rule', rule_id=rule.id) }}" class="btn btn-outline btn-sm">Edit</a>
+                    {% if current_user.role == 'admin' %}
+                    <form method="POST" action="{{ url_for('delete_rule', rule_id=rule.id) }}" onsubmit="return confirm('Delete this rule and all its placements?');">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="empty-state">
+                <div class="icon">📋</div>
+                <p>No rules defined yet. <a href="{{ url_for('add_rule') }}" style="color:var(--primary); font-weight:600;">Create your first rule</a></p>
+            </div>
+        </div>
+        {% endif %}
+    </main>
+</div>
+{% endblock %}

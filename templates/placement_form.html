@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Record Placement | YG1 Monitoring{% endblock %}
+{% block content %}
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="badge"><img src="{{ url_for('static', filename='images/yg1_images.png') }}" alt="YG1 Logo"></div>
+            <div>
+                <h2>YG1 Monitor</h2>
+                <small>Rules & Discipline</small>
+            </div>
+        </div>
+        <nav>
+            <div class="nav-label">Main</div>
+            <a href="{{ url_for('dashboard') }}"><span class="icon">📊</span> <span>Dashboard</span></a>
+            <a href="{{ url_for('placements') }}" class="active"><span class="icon">📍</span> <span>Placements</span></a>
+            <a href="{{ url_for('rules') }}"><span class="icon">📋</span> <span>Rules</span></a>
+            <a href="{{ url_for('alerts') }}"><span class="icon">🔔</span> <span>Alerts</span></a>
+            {% if current_user.role == 'admin' %}
+            <div class="nav-label">Admin</div>
+            <a href="{{ url_for('users') }}"><span class="icon">👥</span> <span>Users</span></a>
+            {% endif %}
+        </nav>
+        <div class="user-box">
+            <div class="user-info">
+                <strong>{{ current_user.username }}</strong>
+                <span>{{ current_user.role|capitalize }} · {{ current_user.email }}</span>
+            </div>
+            <a href="{{ url_for('logout') }}" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; font-size:14px; color:#fca5a5; transition:background .2s;">
+                <span class="icon">🚪</span> <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1>Record Placement</h1>
+                <p>Record the actual location of an item to check compliance</p>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="card" style="max-width: 700px;">
+            <form method="POST" action="{{ url_for('add_placement') }}">
+                <div class="form-group">
+                    <label for="rule_id">Rule *</label>
+                    <select id="rule_id" name="rule_id" required>
+                        <option value="">-- Select a rule --</option>
+                        {% for r in rules %}
+                        <option value="{{ r.id }}" {% if form and form.rule_id|int == r.id %}selected{% endif %}>
+                            {{ r.item }} → {{ r.required_location }} ({{ r.rule_name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="zone">Zone *</label>
+                    <input type="text" id="zone" name="zone" placeholder="e.g., Plant A - Zone 1" required value="{{ form.zone if form else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="current_location">Current Location of Item *</label>
+                    <input type="text" id="current_location" name="current_location" placeholder="Where is the item actually located?" required value="{{ form.current_location if form else '' }}">
+                    <small style="color:var(--text-light); display:block; margin-top:4px;">If this does not match the rule's required location, a violation alert will be sent.</small>
+                </div>
+                <div class="form-group">
+                    <label for="responsible_person">Responsible Person *</label>
+                    <input type="text" id="responsible_person" name="responsible_person" placeholder="e.g., Rajesh Kumar" required value="{{ form.responsible_person if form else '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="coordinator_email">Coordinator Email *</label>
+                    <input type="email" id="coordinator_email" name="coordinator_email" placeholder="coordinator@company.com" required value="{{ form.coordinator_email if form else '' }}">
+                    <small style="color:var(--text-light); display:block; margin-top:4px;">Violation alerts will be sent to this email immediately.</small>
+                </div>
+                <div class="form-group">
+                    <label for="violation_reason">Violation Reason (optional)</label>
+                    <textarea id="violation_reason" name="violation_reason" rows="2" placeholder="Only if this placement is a violation">{{ form.violation_reason if form else '' }}</textarea>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button type="submit" class="btn btn-primary">Check & Save</button>
+                    <a href="{{ url_for('placements') }}" class="btn btn-outline">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+{% endblock %}

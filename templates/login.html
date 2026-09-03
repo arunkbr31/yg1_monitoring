@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Login | YG1 Monitoring{% endblock %}
+{% block body_class %}auth-body{% endblock %}
+{% block content %}
+<div class="auth-card">
+    <div class="auth-logo">
+        <div class="logo-badge"><img src="{{ url_for('static', filename='images/yg1_images.png') }}" alt="YG1 Logo"></div>
+        <h1>YG1 Monitoring System</h1>
+        <p>Company Rules & Discipline Tracker</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-container">
+            {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('login') }}">
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Enter your username" required autofocus>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="Enter your password" required>
+        </div>
+
+        <div class="remember-row">
+            <label>
+                <input type="checkbox" name="remember"> Remember me
+            </label>
+            <a href="{{ url_for('register') }}">Create account</a>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+    </form>
+
+    <div style="text-align:center; margin-top:20px; font-size:12px; color:var(--text-light);">
+        <p>Secure company monitoring portal</p>
+        <p>🔒 All sessions are encrypted & protected</p>
+    </div>
+</div>
+{% endblock %}
