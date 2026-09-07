@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Users | YG1 Monitoring{% endblock %}
+{% block title %}Mail Logs | YG1 Monitoring{% endblock %}
 {% block content %}
 <div class="layout">
     <aside class="sidebar">
@@ -16,9 +16,11 @@
             <a href="{{ url_for('audits') }}"><span class="icon">📍</span> <span>Audits</span></a>
             <a href="{{ url_for('rules') }}"><span class="icon">📋</span> <span>Rules</span></a>
             <a href="{{ url_for('alerts') }}"><span class="icon">🔔</span> <span>Alerts</span></a>
-            <a href="{{ url_for('mail_logs') }}"><span class="icon">📧</span> <span>Mail Logs</span></a>
+            <a href="{{ url_for('mail_logs') }}" class="active"><span class="icon">📧</span> <span>Mail Logs</span></a>
+            {% if current_user.role == 'admin' %}
             <div class="nav-label">Admin</div>
-            <a href="{{ url_for('users') }}" class="active"><span class="icon">👥</span> <span>Users</span></a>
+            <a href="{{ url_for('users') }}"><span class="icon">👥</span> <span>Users</span></a>
+            {% endif %}
         </nav>
         <div class="user-box">
             <div class="user-info">
@@ -34,8 +36,8 @@
     <main class="main">
         <div class="page-header">
             <div>
-                <h1>User Management</h1>
-                <p>Manage system users and their access</p>
+                <h1>Email Logs</h1>
+                <p>Track all sent and failed email notifications</p>
             </div>
         </div>
 
@@ -50,54 +52,43 @@
         {% endwith %}
 
         <div class="card">
-            <div class="table-wrap">
+            {% if logs %}
+            <div class="table-scroll">
                 <table>
                     <thead>
                         <tr>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Role</th>
+                            <th>Recipient</th>
+                            <th>Subject</th>
                             <th>Status</th>
-                            <th>Created</th>
-                            <th>Actions</th>
+                            <th>Error</th>
+                            <th>Time</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for user in users %}
+                        {% for log in logs %}
                         <tr>
-                            <td><strong>{{ user.username }}</strong>{% if user.id == current_user.id %} <span style="font-size:11px; color:var(--text-light);">(you)</span>{% endif %}</td>
-                            <td>{{ user.email }}</td>
+                            <td>{{ log.recipient }}</td>
+                            <td>{{ log.subject[:60] }}</td>
                             <td>
-                                {% if user.role == 'admin' %}
-                                <span class="badge badge-admin">Admin</span>
+                                {% if log.status == 'sent' %}
+                                <span class="badge badge-compliant">✓ Sent</span>
                                 {% else %}
-                                <span class="badge badge-coordinator">Coordinator</span>
+                                <span class="badge badge-violation">✗ Failed</span>
                                 {% endif %}
                             </td>
-                            <td>
-                                {% if user.is_active %}
-                                <span class="badge badge-active">Active</span>
-                                {% else %}
-                                <span class="badge badge-inactive">Inactive</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ user.created_at.strftime('%d %b %Y') if user.created_at else '—' }}</td>
-                            <td>
-                                {% if user.id != current_user.id %}
-                                <form method="POST" action="{{ url_for('deactivate_user', user_id=user.id) }}">
-                                    <button type="submit" class="btn btn-sm {% if user.is_active %}btn-warning{% else %}btn-success{% endif %}">
-                                        {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
-                                    </button>
-                                </form>
-                                {% else %}
-                                <span style="font-size:12px; color:var(--text-light);">—</span>
-                                {% endif %}
-                            </td>
+                            <td>{{ log.error[:80] if log.error else '-' }}</td>
+                            <td>{{ log.sent_at.strftime('%d %b %Y, %H:%M:%S') }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="icon">📧</div>
+                <p>No emails sent yet.</p>
+            </div>
+            {% endif %}
         </div>
     </main>
 </div>

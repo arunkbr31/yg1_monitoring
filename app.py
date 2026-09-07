@@ -18,7 +18,7 @@ from flask_login import (
 from dotenv import load_dotenv
 
 from extensions import db
-from models import User, Rule, Audit, Alert
+from models import User, Rule, Audit, Alert, MailLog
 
 
 load_dotenv()
@@ -80,10 +80,22 @@ def send_email(to_email, subject, body_text, body_html=None):
     smtp_pass = os.getenv('SMTP_PASSWORD', '').strip()
     from_email = os.getenv('ALERT_FROM_EMAIL', '').strip() or smtp_user
 
+    log_entry = MailLog(
+        recipient=to_email,
+        subject=subject,
+        body=body_text,
+        status='failed',
+        error=None,
+    )
+
     if not smtp_host or not smtp_user or not smtp_pass:
+        error_msg = 'SMTP not configured. Set SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD in .env'
+        log_entry.error = error_msg
+        db.session.add(log_entry)
+        db.session.commit()
         print(f"[EMAIL LOGGED] To: {to_email} | Subject: {subject}")
         print(f"  Body: {body_text}")
-        return False
+        return False, error_msg
 
     msg = MIMEMultipart('alternative')
     msg['Subject'] = subject
@@ -99,11 +111,18 @@ def send_email(to_email, subject, body_text, body_html=None):
             server.starttls(context=context)
             server.login(smtp_user, smtp_pass)
             server.sendmail(from_email, to_email, msg.as_string())
+        log_entry.status = 'sent'
+        db.session.add(log_entry)
+        db.session.commit()
         print(f"[EMAIL SENT] To: {to_email} | Subject: {subject}")
-        return True
+        return True, None
     except Exception as e:
-        print(f"[EMAIL FAILED] {e}")
-        return False
+        error_msg = str(e)
+        log_entry.error = error_msg
+        db.session.add(log_entry)
+        db.session.commit()
+        print(f"[EMAIL FAILED] {error_msg}")
+        return False, error_msg
 
 
 def get_status_counts():
@@ -590,13 +609,20 @@ def create_audit_alert(audit):
     db.session.add(alert)
     db.session.commit()
 
-    sent = send_email(audit.responsible_email, subject, body_text, body_html)
+    sent, error_msg = send_email(audit.responsible_email, subject, body_text, body_html)
     if sent:
         flash(f"Alert email sent to {audit.responsible_email}.", 'success')
     else:
-        flash(f"Alert logged for {audit.responsible_email}. Configure SMTP to send emails.", 'warning')
+        flash(f"Email failed: {error_msg}", 'error')
 
     return alert
+
+
+@app.route('/mail-logs')
+@login_required
+def mail_logs():
+    logs = MailLog.query.order_by(MailLog.sent_at.desc()).limit(100).all()
+    return render_template('mail_logs.html', logs=logs)
 
 
 @app.route('/alerts')
@@ -619,19 +645,53 @@ def acknowledge_alert(alert_id):
     return redirect(url_for('dashboard'))
 
 
+@app.route('/alerts/resend/<int:alert_id>', methods=['POST'])
+@login_required
+def resend_alert(alert_id):
+    alert = db.session.get(Alert, alert_id)
+    if alert:
+        audit = db.session.get(Audit, alert.audit_id)
+        if audit:
+            sent, error_msg = send_email(
+                alert.responsible_email,
+                alert.subject,
+                alert.message,
+                f"<h3>{alert.subject}</h3><p>{alert.message.replace(chr(10), '<br>')}</p>"
+            )
+            if sent:
+                flash(f"Alert resent to {alert.responsible_email}.", 'success')
+            else:
+                flash(f"Email failed: {error_msg}", 'error')
+        else:
+            flash('Associated audit not found.', 'error')
+    else:
+        flash('Alert not found.', 'error')
+    return redirect(url_for('alerts'))
+
+
 @app.route('/test-email')
 @login_required
 def test_email():
     test_email = request.args.get('email', '')
     if not test_email:
         return 'Usage: /test-email?email=you@example.com', 400
-    sent = send_email(
+    
+    smtp_host = os.getenv('SMTP_HOST', '').strip()
+    smtp_user = os.getenv('SMTP_USERNAME', '').strip()
+    smtp_pass = os.getenv('SMTP_PASSWORD', '').strip()
+    
+    if not smtp_host or not smtp_user or not smtp_pass:
+        return f"SMTP not configured. Set SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD in .env file. Current: host={smtp_host or 'MISSING'}, user={smtp_user or 'MISSING'}, pass={'SET' if smtp_pass else 'MISSING'}", 500
+    
+    sent, error_msg = send_email(
         test_email,
         'Test Email from YG1 Monitor',
         'This is a test email. If you receive this, SMTP is configured correctly.',
         '<h3>Test Email</h3><p>This is a test email from YG1 Monitor.</p>'
     )
-    return f"Email sent: {sent}", 200
+    if sent:
+        return f"Email sent to {test_email}", 200
+    return f"Email failed: {error_msg}", 500
 
 
 if __name__ == '__main__':
