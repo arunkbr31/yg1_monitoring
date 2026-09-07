@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit Audit' if audit else 'New Audit' }} | YG1 Monitoring{% endblock %}
+{% block content %}
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="badge"><img src="{{ url_for('static', filename='images/yg1_images.png') }}" alt="YG1 Logo"></div>
+            <div>
+                <h2>YG1 Monitor</h2>
+                <small>Rules & Discipline</small>
+            </div>
+        </div>
+        <nav>
+            <div class="nav-label">Main</div>
+            <a href="{{ url_for('dashboard') }}"><span class="icon">📊</span> <span>Dashboard</span></a>
+            <a href="{{ url_for('audits') }}" class="active"><span class="icon">📍</span> <span>Audits</span></a>
+            <a href="{{ url_for('rules') }}"><span class="icon">📋</span> <span>Rules</span></a>
+            {% if current_user.role == 'admin' %}
+            <div class="nav-label">Admin</div>
+            <a href="{{ url_for('users') }}"><span class="icon">👥</span> <span>Users</span></a>
+            {% endif %}
+        </nav>
+        <div class="user-box">
+            <div class="user-info">
+                <strong>{{ current_user.username }}</strong>
+                <span>{{ current_user.role|capitalize }} · {{ current_user.email }}</span>
+            </div>
+            <a href="{{ url_for('logout') }}" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; font-size:14px; color:#fca5a5; transition:background .2s;">
+                <span class="icon">🚪</span> <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1>{{ 'Edit Audit' if audit else 'New Audit Record' }}</h1>
+                <p>Record non-conformity details with images and action plan</p>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="card" style="max-width: 800px;">
+            <form method="POST" action="{% if audit %}{{ url_for('edit_audit', audit_id=audit.id) }}{% else %}{{ url_for('add_audit') }}{% endif %}" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="audit_date">Audit Date *</label>
+                    <input type="date" id="audit_date" name="audit_date" required value="{{ audit.audit_date.strftime('%Y-%m-%d') if audit else (form.audit_date if form else '') }}">
+                </div>
+                <div class="form-group">
+                    <label for="ygct_plant1">YGCT-Plant1 *</label>
+                    <input type="text" id="ygct_plant1" name="ygct_plant1" placeholder="e.g., YGCT-Plant1" required value="{{ audit.ygct_plant1 if audit else (form.ygct_plant1 if form else '') }}">
+                </div>
+                <div class="form-group">
+                    <label for="zonal_leader">Zonal Leader *</label>
+                    <input type="text" id="zonal_leader" name="zonal_leader" placeholder="e.g., John Doe" required value="{{ audit.zonal_leader if audit else (form.zonal_leader if form else '') }}">
+                </div>
+                <div class="form-group">
+                    <label for="nc_category">NC Category *</label>
+                    <input type="text" id="nc_category" name="nc_category" placeholder="e.g., Safety, Housekeeping, Quality" required value="{{ audit.nc_category if audit else (form.nc_category if form else '') }}">
+                </div>
+                <div class="form-group">
+                    <label for="description">Description of Non Conformity *</label>
+                    <textarea id="description" name="description" rows="3" placeholder="Describe the non-conformity found during audit" required>{{ audit.description if audit else (form.description if form else '') }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="before_image">Before Image</label>
+                    <input type="file" id="before_image" name="before_image" accept="image/*">
+                    {% if audit and audit.before_image %}
+                    <div style="margin-top:8px;">
+                        <img src="{{ url_for('static', filename='uploads/' + audit.before_image) }}" alt="Before" style="max-height:150px; border-radius:8px; border:1px solid var(--gray-border);">
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="after_image">After Image</label>
+                    <input type="file" id="after_image" name="after_image" accept="image/*">
+                    {% if audit and audit.after_image %}
+                    <div style="margin-top:8px;">
+                        <img src="{{ url_for('static', filename='uploads/' + audit.after_image) }}" alt="After" style="max-height:150px; border-radius:8px; border:1px solid var(--gray-border);">
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="action_taken_details">Action Taken Details</label>
+                    <textarea id="action_taken_details" name="action_taken_details" rows="3" placeholder="Describe corrective actions taken">{{ audit.action_taken_details if audit else (form.action_taken_details if form else '') }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label for="responsible_hod">Responsible HOD *</label>
+                    <input type="text" id="responsible_hod" name="responsible_hod" placeholder="e.g., Head of Department Name" required value="{{ audit.responsible_hod if audit else (form.responsible_hod if form else '') }}">
+                </div>
+                <div class="form-group">
+                    <label for="target_date">Target Date</label>
+                    <input type="date" id="target_date" name="target_date" value="{{ audit.target_date.strftime('%Y-%m-%d') if audit and audit.target_date else (form.target_date if form else '') }}">
+                </div>
+                <div class="form-group">
+                    <label for="status">Status *</label>
+                    <select id="status" name="status" required>
+                        <option value="open" {% if audit and audit.status == 'open' %}selected{% endif %}>Open</option>
+                        <option value="closed" {% if audit and audit.status == 'closed' %}selected{% endif %}>Closed</option>
+                    </select>
+                </div>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button type="submit" class="btn btn-primary">Save Audit</button>
+                    <a href="{{ url_for('audits') }}" class="btn btn-outline">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+{% endblock %}

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Placements | YG1 Monitoring{% endblock %}
+{% block title %}Audits | YG1 Monitoring{% endblock %}
 {% block content %}
 <div class="layout">
     <aside class="sidebar">
@@ -34,11 +34,11 @@
     <main class="main">
         <div class="page-header">
             <div>
-                <h1>Placements</h1>
-                <p>Monitor actual item locations against company rules</p>
+                <h1>Audit Records</h1>
+                <p>Non-conformity tracking with before/after images and corrective actions</p>
             </div>
             <div class="actions">
-                <a href="{{ url_for('add_placement') }}" class="btn btn-primary">+ Record Placement</a>
+                <a href="{{ url_for('add_audit') }}" class="btn btn-primary">+ New Audit</a>
             </div>
         </div>
 
@@ -53,57 +53,74 @@
         {% endwith %}
 
         <div class="card">
-            {% if placements %}
+            {% if audits %}
             <div class="table-scroll">
                 <table>
                     <thead>
                         <tr>
-                            <th>Item</th>
-                            <th>Zone</th>
-                            <th>Current Location</th>
-                            <th>Required Location</th>
-                            <th>Responsible</th>
-                            <th>Coordinator</th>
+                            <th>Audit Date</th>
+                            <th>YGCT-Plant1</th>
+                            <th>Zonal Leader</th>
+                            <th>NC Category</th>
+                            <th>Description of NC</th>
+                            <th>Before</th>
+                            <th>After</th>
+                            <th>Action Taken</th>
+                            <th>Responsible HOD</th>
+                            <th>Target Date</th>
                             <th>Status</th>
-                            <th>Compliance</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for p in placements %}
+                        {% for a in audits %}
                         <tr>
-                            <td><strong>{{ p.rule.item }}</strong><br><small style="color:var(--text-light);">{{ p.rule.rule_name }}</small></td>
-                            <td>{{ p.zone }}</td>
-                            <td>{{ p.current_location }}</td>
-                            <td>{{ p.rule.required_location }}</td>
-                            <td>{{ p.responsible_person }}</td>
-                            <td>{{ p.coordinator_email }}</td>
+                            <td>{{ a.audit_date.strftime('%d %b %Y') }}</td>
+                            <td>{{ a.ygct_plant1 }}</td>
+                            <td>{{ a.zonal_leader }}</td>
+                            <td>{{ a.nc_category }}</td>
+                            <td>{{ a.description[:60] }}{% if a.description|length > 60 %}...{% endif %}</td>
                             <td>
-                                {% if p.status == 'open' %}
+                                {% if a.before_image %}
+                                <a href="{{ url_for('static', filename='uploads/' + a.before_image) }}" target="_blank">
+                                    <img src="{{ url_for('static', filename='uploads/' + a.before_image) }}" alt="Before" style="max-height:60px; border-radius:6px; border:1px solid var(--gray-border); cursor:pointer;">
+                                </a>
+                                {% else %}
+                                <span style="color:var(--text-light);">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if a.after_image %}
+                                <a href="{{ url_for('static', filename='uploads/' + a.after_image) }}" target="_blank">
+                                    <img src="{{ url_for('static', filename='uploads/' + a.after_image) }}" alt="After" style="max-height:60px; border-radius:6px; border:1px solid var(--gray-border); cursor:pointer;">
+                                </a>
+                                {% else %}
+                                <span style="color:var(--text-light);">-</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ a.action_taken_details[:60] if a.action_taken_details else '-' }}{% if a.action_taken_details and a.action_taken_details|length > 60 %}...{% endif %}</td>
+                            <td>{{ a.responsible_hod }}</td>
+                            <td>{{ a.target_date.strftime('%d %b %Y') if a.target_date else '-' }}</td>
+                            <td>
+                                {% if a.status == 'open' %}
                                 <span class="badge badge-open">Open</span>
                                 {% else %}
                                 <span class="badge badge-closed">Closed</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if p.is_compliant %}
-                                <span class="badge badge-compliant">✓ Compliant</span>
-                                {% else %}
-                                <span class="badge badge-violation">✗ Violation</span>
-                                {% endif %}
-                            </td>
-                            <td>
                                 <div style="display:flex; gap:6px;">
-                                    {% if p.status == 'open' %}
-                                    <form method="POST" action="{{ url_for('close_placement', placement_id=p.id) }}">
+                                    <a href="{{ url_for('edit_audit', audit_id=a.id) }}" class="btn btn-outline btn-sm">Edit</a>
+                                    {% if a.status == 'open' %}
+                                    <form method="POST" action="{{ url_for('close_audit', audit_id=a.id) }}">
                                         <button type="submit" class="btn btn-success btn-sm">Close</button>
                                     </form>
                                     {% else %}
-                                    <form method="POST" action="{{ url_for('reopen_placement', placement_id=p.id) }}">
+                                    <form method="POST" action="{{ url_for('reopen_audit', audit_id=a.id) }}">
                                         <button type="submit" class="btn btn-outline btn-sm">Reopen</button>
                                     </form>
                                     {% endif %}
-                                    <form method="POST" action="{{ url_for('delete_placement', placement_id=p.id) }}" onsubmit="return confirm('Delete this placement record?');">
+                                    <form method="POST" action="{{ url_for('delete_audit', audit_id=a.id) }}" onsubmit="return confirm('Delete this audit record?');">
                                         <button type="submit" class="link-btn danger">Delete</button>
                                     </form>
                                 </div>
@@ -116,7 +133,7 @@
             {% else %}
             <div class="empty-state">
                 <div class="icon">📍</div>
-                <p>No placements recorded yet. <a href="{{ url_for('add_placement') }}" style="color:var(--primary); font-weight:600;">Record your first placement</a></p>
+                <p>No audit records yet. <a href="{{ url_for('add_audit') }}" style="color:var(--primary); font-weight:600;">Create your first audit</a></p>
             </div>
             {% endif %}
         </div>

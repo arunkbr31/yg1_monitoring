@@ -13,9 +13,8 @@
         <nav>
             <div class="nav-label">Main</div>
             <a href="{{ url_for('dashboard') }}" class="active"><span class="icon">📊</span> <span>Dashboard</span></a>
-            <a href="{{ url_for('placements') }}"><span class="icon">📍</span> <span>Placements</span></a>
+            <a href="{{ url_for('audits') }}"><span class="icon">📍</span> <span>Audits</span></a>
             <a href="{{ url_for('rules') }}"><span class="icon">📋</span> <span>Rules</span></a>
-            <a href="{{ url_for('alerts') }}"><span class="icon">🔔</span> <span>Alerts</span></a>
             {% if current_user.role == 'admin' %}
             <div class="nav-label">Admin</div>
             <a href="{{ url_for('users') }}"><span class="icon">👥</span> <span>Users</span></a>
@@ -36,11 +35,10 @@
         <div class="page-header">
             <div>
                 <h1>Dashboard</h1>
-                <p>Company rules & discipline monitoring overview</p>
+                <p>Non-conformity audit monitoring overview</p>
             </div>
             <div class="actions">
-                <a href="{{ url_for('add_placement') }}" class="btn btn-primary">+ Add Placement</a>
-                <a href="{{ url_for('add_rule') }}" class="btn btn-outline">+ New Rule</a>
+                <a href="{{ url_for('add_audit') }}" class="btn btn-primary">+ New Audit</a>
             </div>
         </div>
 
@@ -54,126 +52,70 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Stats Cards -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="label">Total Placements</div>
+                <div class="label">Total Audits</div>
                 <div class="value">{{ counts.total }}</div>
-                <div class="sub">All monitored items</div>
-            </div>
-            <div class="stat-card green">
-                <div class="label">Compliant</div>
-                <div class="value">{{ counts.compliant }}</div>
-                <div class="sub">Following rules ✓</div>
-            </div>
-            <div class="stat-card red">
-                <div class="label">Violations</div>
-                <div class="value">{{ counts.violations }}</div>
-                <div class="sub">Items out of place</div>
+                <div class="sub">All records</div>
             </div>
             <div class="stat-card amber">
-                <div class="label">Open Violations</div>
+                <div class="label">Open</div>
                 <div class="value">{{ counts.open }}</div>
-                <div class="sub">Awaiting action</div>
+                <div class="sub">Pending action</div>
             </div>
             <div class="stat-card blue">
-                <div class="label">Closed Violations</div>
+                <div class="label">Closed</div>
                 <div class="value">{{ counts.closed }}</div>
-                <div class="sub">Resolved ✓</div>
+                <div class="sub">Resolved</div>
             </div>
         </div>
 
-        <!-- Charts -->
         <div class="charts-grid">
             <div class="chart-box">
-                <h3>📈 Open vs Closed Violations</h3>
+                <h3>📈 Open vs Closed</h3>
                 <canvas id="statusChart"></canvas>
             </div>
             <div class="chart-box">
-                <h3>✅ Compliance Overview</h3>
-                <canvas id="complianceChart"></canvas>
+                <h3>📊 NC Categories</h3>
+                <canvas id="categoryChart"></canvas>
             </div>
         </div>
 
         <div class="charts-grid">
-            <div class="chart-box">
-                <h3>📊 Violations by Rule</h3>
-                <canvas id="ruleChart"></canvas>
-            </div>
             <div class="chart-box">
                 <h3>🗓️ Weekly Trend (Last 7 Days)</h3>
                 <canvas id="weeklyChart"></canvas>
             </div>
         </div>
 
-        <!-- Recent Alerts -->
         <div class="card">
-            <h3>🔔 Recent Alerts</h3>
-            {% if alerts %}
-            <div class="alerts-list">
-                {% for alert in alerts %}
-                <div class="alert-item {% if alert.acknowledged %}resolved{% endif %}">
-                    <div class="alert-icon">{% if alert.acknowledged %}✅{% else %}⚠️{% endif %}</div>
-                    <div class="alert-content">
-                        <strong>{{ alert.subject }}</strong>
-                        <span>{{ alert.message[:120] }}{% if alert.message|length > 120 %}...{% endif %}</span>
-                        <span style="display:block; margin-top:4px;">📧 {{ alert.coordinator_email }} · {{ alert.sent_at.strftime('%d %b %Y, %H:%M') }}</span>
-                    </div>
-                    <div class="alert-actions">
-                        {% if not alert.acknowledged %}
-                        <form method="POST" action="{{ url_for('acknowledge_alert', alert_id=alert.id) }}">
-                            <button type="submit" class="btn btn-success btn-sm">Acknowledge</button>
-                        </form>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <div class="icon">🔕</div>
-                <p>No alerts yet. Alerts will appear here when violations are detected.</p>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Recent Placements -->
-        <div class="card">
-            <h3>📍 Recent Placements</h3>
-            {% if placements %}
+            <h3>📍 Recent Audits</h3>
+            {% if audits %}
             <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
-                            <th>Item</th>
-                            <th>Zone</th>
-                            <th>Current Location</th>
-                            <th>Required Location</th>
-                            <th>Responsible</th>
+                            <th>Audit Date</th>
+                            <th>YGCT-Plant1</th>
+                            <th>NC Category</th>
+                            <th>Description</th>
+                            <th>HOD</th>
                             <th>Status</th>
-                            <th>Compliance</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for p in placements[:10] %}
+                        {% for a in audits[:10] %}
                         <tr>
-                            <td><strong>{{ p.rule.item }}</strong></td>
-                            <td>{{ p.zone }}</td>
-                            <td>{{ p.current_location }}</td>
-                            <td>{{ p.rule.required_location }}</td>
-                            <td>{{ p.responsible_person }}</td>
+                            <td>{{ a.audit_date.strftime('%d %b %Y') }}</td>
+                            <td>{{ a.ygct_plant1 }}</td>
+                            <td>{{ a.nc_category }}</td>
+                            <td>{{ a.description[:50] }}{% if a.description|length > 50 %}...{% endif %}</td>
+                            <td>{{ a.responsible_hod }}</td>
                             <td>
-                                {% if p.status == 'open' %}
+                                {% if a.status == 'open' %}
                                 <span class="badge badge-open">Open</span>
                                 {% else %}
                                 <span class="badge badge-closed">Closed</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if p.is_compliant %}
-                                <span class="badge badge-compliant">✓ Compliant</span>
-                                {% else %}
-                                <span class="badge badge-violation">✗ Violation</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -184,7 +126,7 @@
             {% else %}
             <div class="empty-state">
                 <div class="icon">📍</div>
-                <p>No placements recorded yet. <a href="{{ url_for('add_placement') }}" style="color:var(--primary); font-weight:600;">Add your first placement</a></p>
+                <p>No audits recorded yet. <a href="{{ url_for('add_audit') }}" style="color:var(--primary); font-weight:600;">Add your first audit</a></p>
             </div>
             {% endif %}
         </div>
@@ -200,14 +142,13 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
             const counts = data.counts;
 
-            // 1. Open vs Closed Violations (Doughnut)
             new Chart(document.getElementById('statusChart'), {
                 type: 'doughnut',
                 data: {
-                    labels: ['Open Violations', 'Closed Violations'],
+                    labels: ['Open', 'Closed'],
                     datasets: [{
                         data: [counts.open, counts.closed],
-                        backgroundColor: ['#dc2626', '#16a34a'],
+                        backgroundColor: ['#d97706', '#16a34a'],
                         borderWidth: 2,
                         borderColor: '#fff'
                     }]
@@ -215,71 +156,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
+                    plugins: { legend: { position: 'bottom' } }
                 }
             });
 
-            // 2. Compliance Overview (Pie)
-            new Chart(document.getElementById('complianceChart'), {
-                type: 'pie',
-                data: {
-                    labels: ['Compliant', 'Violations'],
-                    datasets: [{
-                        data: [counts.compliant, counts.violations],
-                        backgroundColor: ['#16a34a', '#dc2626'],
-                        borderWidth: 2,
-                        borderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
-                }
-            });
-
-            // 3. Violations by Rule (Bar)
-            const ruleLabels = data.rule_stats.map(r => r.rule);
-            const ruleViolations = data.rule_stats.map(r => r.violations);
-            const ruleCompliant = data.rule_stats.map(r => r.compliant);
-
-            new Chart(document.getElementById('ruleChart'), {
+            const catLabels = data.category_stats.map(r => r.category);
+            const catTotals = data.category_stats.map(r => r.total);
+            new Chart(document.getElementById('categoryChart'), {
                 type: 'bar',
                 data: {
-                    labels: ruleLabels,
-                    datasets: [
-                        {
-                            label: 'Violations',
-                            data: ruleViolations,
-                            backgroundColor: '#dc2626',
-                            borderRadius: 6
-                        },
-                        {
-                            label: 'Compliant',
-                            data: ruleCompliant,
-                            backgroundColor: '#16a34a',
-                            borderRadius: 6
-                        }
-                    ]
+                    labels: catLabels,
+                    datasets: [{
+                        label: 'Total',
+                        data: catTotals,
+                        backgroundColor: '#2563eb',
+                        borderRadius: 6
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        x: { stacked: true },
-                        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
-                    },
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
+                    plugins: { legend: { position: 'bottom' } }
                 }
             });
 
-            // 4. Weekly Trend (Line)
             const weekLabels = data.weekly.map(w => w.date);
             const weekOpen = data.weekly.map(w => w.open);
             const weekClosed = data.weekly.map(w => w.closed);
@@ -292,8 +192,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         {
                             label: 'Open',
                             data: weekOpen,
-                            borderColor: '#dc2626',
-                            backgroundColor: 'rgba(220,38,38,.1)',
+                            borderColor: '#d97706',
+                            backgroundColor: 'rgba(217,119,6,.1)',
                             fill: true,
                             tension: .4,
                             pointRadius: 4

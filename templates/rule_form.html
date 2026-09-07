@@ -13,9 +13,8 @@
         <nav>
             <div class="nav-label">Main</div>
             <a href="{{ url_for('dashboard') }}"><span class="icon">📊</span> <span>Dashboard</span></a>
-            <a href="{{ url_for('placements') }}"><span class="icon">📍</span> <span>Placements</span></a>
+            <a href="{{ url_for('audits') }}"><span class="icon">📍</span> <span>Audits</span></a>
             <a href="{{ url_for('rules') }}" class="active"><span class="icon">📋</span> <span>Rules</span></a>
-            <a href="{{ url_for('alerts') }}"><span class="icon">🔔</span> <span>Alerts</span></a>
             {% if current_user.role == 'admin' %}
             <div class="nav-label">Admin</div>
             <a href="{{ url_for('users') }}"><span class="icon">👥</span> <span>Users</span></a>

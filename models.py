@@ -5,7 +5,6 @@ from datetime import datetime
 
 
 class User(UserMixin, db.Model):
-    """Admin / Coordinator user with secure password hashing."""
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
@@ -25,51 +24,34 @@ class User(UserMixin, db.Model):
 
 
 class Rule(db.Model):
-    """Company rule defining where an item must be placed."""
-    id = db.Column(db.Integer, primary_key=True)
     rule_name = db.Column(db.String(120), nullable=False)
     item = db.Column(db.String(100), nullable=False)
     required_location = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
+
+    id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    placements = db.relationship('Placement', backref='rule', lazy=True, cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<Rule {self.rule_name}>'
 
 
-class Placement(db.Model):
-    """Record of an item's actual location, checked against a rule."""
+class Audit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    rule_id = db.Column(db.Integer, db.ForeignKey('rule.id'), nullable=False)
-    zone = db.Column(db.String(100), nullable=False)
-    current_location = db.Column(db.String(200), nullable=False)
-    responsible_person = db.Column(db.String(100), nullable=False)
-    coordinator_email = db.Column(db.String(120), nullable=False)
-    violation_reason = db.Column(db.Text)
-    status = db.Column(db.String(20), default='open')
-    is_compliant = db.Column(db.Boolean, default=False)
+    audit_date = db.Column(db.Date, nullable=False)
+    ygct_plant1 = db.Column(db.String(100), nullable=False)
+    zonal_leader = db.Column(db.String(100), nullable=False)
+    nc_category = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    before_image = db.Column(db.String(200))
+    after_image = db.Column(db.String(200))
+    action_taken_details = db.Column(db.Text)
+    responsible_hod = db.Column(db.String(100), nullable=False)
+    target_date = db.Column(db.Date)
+    status = db.Column(db.String(20), nullable=False, default='open')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    alerts = db.relationship('Alert', backref='placement', lazy=True, cascade='all, delete-orphan')
-
     def __repr__(self):
-        return f'<Placement {self.id} - {self.rule.item} - {self.status}>'
-
-
-class Alert(db.Model):
-    """Alert sent to a coordinator when a placement violates a rule."""
-    id = db.Column(db.Integer, primary_key=True)
-    placement_id = db.Column(db.Integer, db.ForeignKey('placement.id'), nullable=False)
-    subject = db.Column(db.String(200), nullable=False)
-    message = db.Column(db.Text, nullable=False)
-    coordinator_email = db.Column(db.String(120), nullable=False)
-    sent_at = db.Column(db.DateTime, default=datetime.utcnow)
-    acknowledged = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    def __repr__(self):
-        return f'<Alert {self.id} - {self.subject}>'
+        return f'<Audit {self.id} - {self.nc_category}>'
