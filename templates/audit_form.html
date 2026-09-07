@@ -15,6 +15,7 @@
             <a href="{{ url_for('dashboard') }}"><span class="icon">📊</span> <span>Dashboard</span></a>
             <a href="{{ url_for('audits') }}" class="active"><span class="icon">📍</span> <span>Audits</span></a>
             <a href="{{ url_for('rules') }}"><span class="icon">📋</span> <span>Rules</span></a>
+            <a href="{{ url_for('alerts') }}"><span class="icon">🔔</span> <span>Alerts</span></a>
             {% if current_user.role == 'admin' %}
             <div class="nav-label">Admin</div>
             <a href="{{ url_for('users') }}"><span class="icon">👥</span> <span>Users</span></a>
@@ -96,6 +97,11 @@
                 <div class="form-group">
                     <label for="responsible_hod">Responsible HOD *</label>
                     <input type="text" id="responsible_hod" name="responsible_hod" placeholder="e.g., Head of Department Name" required value="{{ audit.responsible_hod if audit else (form.responsible_hod if form else '') }}">
+                </div>
+                <div class="form-group">
+                    <label for="responsible_email">Responsible Email *</label>
+                    <input type="email" id="responsible_email" name="responsible_email" placeholder="responsible@company.com" required value="{{ audit.responsible_email if audit else (form.responsible_email if form else '') }}">
+                    <small style="color:var(--text-light); display:block; margin-top:4px;">Alert notifications will be sent to this email.</small>
                 </div>
                 <div class="form-group">
                     <label for="target_date">Target Date</label>

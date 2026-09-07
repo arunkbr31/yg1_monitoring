@@ -18,7 +18,7 @@ from flask_login import (
 from dotenv import load_dotenv
 
 from extensions import db
-from models import User, Rule, Audit
+from models import User, Rule, Audit, Alert
 
 
 load_dotenv()
@@ -99,6 +99,7 @@ def send_email(to_email, subject, body_text, body_html=None):
             server.starttls(context=context)
             server.login(smtp_user, smtp_pass)
             server.sendmail(from_email, to_email, msg.as_string())
+        print(f"[EMAIL SENT] To: {to_email} | Subject: {subject}")
         return True
     except Exception as e:
         print(f"[EMAIL FAILED] {e}")
@@ -217,11 +218,13 @@ def logout():
 @login_required
 def dashboard():
     audits = Audit.query.order_by(Audit.created_at.desc()).limit(10).all()
+    alerts = Alert.query.order_by(Alert.sent_at.desc()).limit(10).all()
     counts = get_status_counts()
 
     return render_template(
         'dashboard.html',
         audits=audits,
+        alerts=alerts,
         counts=counts,
         now=datetime.utcnow()
     )
@@ -372,6 +375,7 @@ def add_audit():
         description = request.form.get('description', '').strip()
         action_taken_details = request.form.get('action_taken_details', '').strip()
         responsible_hod = request.form.get('responsible_hod', '').strip()
+        responsible_email = request.form.get('responsible_email', '').strip()
         target_date = parse_date(request.form.get('target_date', ''))
         status = request.form.get('status', 'open')
 
@@ -393,6 +397,8 @@ def add_audit():
             errors.append('Description of Non Conformity is required.')
         if not responsible_hod:
             errors.append('Responsible HOD is required.')
+        if not responsible_email:
+            errors.append('Responsible Email is required.')
 
         if errors:
             for e in errors:
@@ -409,12 +415,16 @@ def add_audit():
             after_image=after_image,
             action_taken_details=action_taken_details,
             responsible_hod=responsible_hod,
+            responsible_email=responsible_email,
             target_date=target_date,
             status=status,
         )
         db.session.add(audit)
         db.session.commit()
-        flash('Audit record created successfully!', 'success')
+
+        create_audit_alert(audit)
+
+        flash('Audit record created successfully! Alert sent to responsible person.', 'success')
         return redirect(url_for('audits'))
 
     return render_template('audit_form.html')
@@ -436,6 +446,7 @@ def edit_audit(audit_id):
         audit.description = request.form.get('description', '').strip()
         audit.action_taken_details = request.form.get('action_taken_details', '').strip()
         audit.responsible_hod = request.form.get('responsible_hod', '').strip()
+        audit.responsible_email = request.form.get('responsible_email', '').strip()
         audit.target_date = parse_date(request.form.get('target_date', ''))
         audit.status = request.form.get('status', 'open')
         audit.updated_at = datetime.utcnow()
@@ -458,6 +469,8 @@ def edit_audit(audit_id):
             errors.append('Description of Non Conformity is required.')
         if not audit.responsible_hod:
             errors.append('Responsible HOD is required.')
+        if not audit.responsible_email:
+            errors.append('Responsible Email is required.')
 
         if errors:
             for e in errors:
@@ -538,6 +551,87 @@ def deactivate_user(user_id):
         action = 'deactivated' if not user.is_active else 'activated'
         flash(f'User {user.username} {action}.', 'info')
     return redirect(url_for('users'))
+
+
+def create_audit_alert(audit):
+    subject = f"New Audit Alert: {audit.nc_category} - {audit.ygct_plant1}"
+    body_text = (
+        f"A new audit record has been created.\n\n"
+        f"Audit Date: {audit.audit_date}\n"
+        f"Plant: {audit.ygct_plant1}\n"
+        f"Zonal Leader: {audit.zonal_leader}\n"
+        f"NC Category: {audit.nc_category}\n"
+        f"Description: {audit.description}\n"
+        f"Responsible HOD: {audit.responsible_hod}\n"
+        f"Target Date: {audit.target_date or 'Not set'}\n"
+        f"Status: {audit.status}\n\n"
+        f"Please take necessary action."
+    )
+    body_html = (
+        f"<h3>New Audit Alert: {audit.nc_category}</h3>"
+        f"<p><strong>Plant:</strong> {audit.ygct_plant1}</p>"
+        f"<p><strong>Audit Date:</strong> {audit.audit_date}</p>"
+        f"<p><strong>Zonal Leader:</strong> {audit.zonal_leader}</p>"
+        f"<p><strong>NC Category:</strong> {audit.nc_category}</p>"
+        f"<p><strong>Description:</strong> {audit.description}</p>"
+        f"<p><strong>Responsible HOD:</strong> {audit.responsible_hod}</p>"
+        f"<p><strong>Target Date:</strong> {audit.target_date or 'Not set'}</p>"
+        f"<p><strong>Status:</strong> {audit.status}</p>"
+        f"<p>Please take necessary action.</p>"
+    )
+
+    alert = Alert(
+        audit_id=audit.id,
+        subject=subject,
+        message=body_text,
+        responsible_email=audit.responsible_email,
+        sent_at=datetime.utcnow(),
+    )
+    db.session.add(alert)
+    db.session.commit()
+
+    sent = send_email(audit.responsible_email, subject, body_text, body_html)
+    if sent:
+        flash(f"Alert email sent to {audit.responsible_email}.", 'success')
+    else:
+        flash(f"Alert logged for {audit.responsible_email}. Configure SMTP to send emails.", 'warning')
+
+    return alert
+
+
+@app.route('/alerts')
+@login_required
+def alerts():
+    all_alerts = Alert.query.order_by(Alert.sent_at.desc()).all()
+    return render_template('alerts.html', alerts=all_alerts)
+
+
+@app.route('/alerts/acknowledge/<int:alert_id>', methods=['POST'])
+@login_required
+def acknowledge_alert(alert_id):
+    alert = db.session.get(Alert, alert_id)
+    if alert:
+        alert.acknowledged = True
+        db.session.commit()
+        flash('Alert acknowledged.', 'success')
+    else:
+        flash('Alert not found.', 'error')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/test-email')
+@login_required
+def test_email():
+    test_email = request.args.get('email', '')
+    if not test_email:
+        return 'Usage: /test-email?email=you@example.com', 400
+    sent = send_email(
+        test_email,
+        'Test Email from YG1 Monitor',
+        'This is a test email. If you receive this, SMTP is configured correctly.',
+        '<h3>Test Email</h3><p>This is a test email from YG1 Monitor.</p>'
+    )
+    return f"Email sent: {sent}", 200
 
 
 if __name__ == '__main__':

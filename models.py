@@ -48,10 +48,27 @@ class Audit(db.Model):
     after_image = db.Column(db.String(200))
     action_taken_details = db.Column(db.Text)
     responsible_hod = db.Column(db.String(100), nullable=False)
+    responsible_email = db.Column(db.String(120), nullable=False)
     target_date = db.Column(db.Date)
     status = db.Column(db.String(20), nullable=False, default='open')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    alerts = db.relationship('Alert', backref='audit', lazy=True, cascade='all, delete-orphan')
+
     def __repr__(self):
         return f'<Audit {self.id} - {self.nc_category}>'
+
+
+class Alert(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    audit_id = db.Column(db.Integer, db.ForeignKey('audit.id'), nullable=False)
+    subject = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    responsible_email = db.Column(db.String(120), nullable=False)
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow)
+    acknowledged = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Alert {self.id} - {self.subject}>'

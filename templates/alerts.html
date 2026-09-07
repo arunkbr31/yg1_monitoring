@@ -15,6 +15,7 @@
             <a href="{{ url_for('dashboard') }}"><span class="icon">📊</span> <span>Dashboard</span></a>
             <a href="{{ url_for('audits') }}"><span class="icon">📍</span> <span>Audits</span></a>
             <a href="{{ url_for('rules') }}"><span class="icon">📋</span> <span>Rules</span></a>
+            <a href="{{ url_for('alerts') }}" class="active"><span class="icon">🔔</span> <span>Alerts</span></a>
             {% if current_user.role == 'admin' %}
             <div class="nav-label">Admin</div>
             <a href="{{ url_for('users') }}"><span class="icon">👥</span> <span>Users</span></a>
@@ -35,7 +36,7 @@
         <div class="page-header">
             <div>
                 <h1>Alert History</h1>
-                <p>All violation alerts sent to coordinators</p>
+                <p>All audit alerts sent to coordinators</p>
             </div>
         </div>
 
@@ -59,9 +60,9 @@
                         <strong>{{ alert.subject }}</strong>
                         <span style="display:block; margin-top:4px;">{{ alert.message|truncate(200) }}</span>
                         <span style="display:block; margin-top:6px; font-size:12px; color:var(--text-light);">
-                            📧 {{ alert.coordinator_email }} ·
+                            📧 {{ alert.responsible_email }} ·
                             🕐 {{ alert.sent_at.strftime('%d %b %Y, %H:%M:%S') }} UTC ·
-                            Placement #{{ alert.placement_id }}
+                            Audit #{{ alert.audit_id }}
                         </span>
                     </div>
                     <div class="alert-actions">
@@ -79,7 +80,7 @@
             {% else %}
             <div class="empty-state">
                 <div class="icon">🔕</div>
-                <p>No alerts sent yet. Alerts are logged whenever a placement violates a rule.</p>
+                <p>No alerts sent yet. Alerts are sent when a new audit is created.</p>
             </div>
             {% endif %}
         </div>
