@@ -74,19 +74,12 @@
 
         <div class="charts-grid">
             <div class="chart-box">
-                <h3>📈 Open vs Closed</h3>
-                <canvas id="statusChart"></canvas>
+                <h3>📊 Last 5 Days - Zone wise Open vs Closed</h3>
+                <canvas id="zoneDailyChart"></canvas>
             </div>
             <div class="chart-box">
-                <h3>📊 NC Categories</h3>
-                <canvas id="categoryChart"></canvas>
-            </div>
-        </div>
-
-        <div class="charts-grid">
-            <div class="chart-box">
-                <h3>🗓️ Weekly Trend (Last 7 Days)</h3>
-                <canvas id="weeklyChart"></canvas>
+                <h3>📅 Monthly Trend (Last 12 Months)</h3>
+                <canvas id="monthlyChart"></canvas>
             </div>
         </div>
 
@@ -142,72 +135,54 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('{{ url_for("charts_data") }}')
         .then(res => res.json())
         .then(data => {
-            const counts = data.counts;
+            const zoneDaily = data.last_5_days_zones;
 
-            new Chart(document.getElementById('statusChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['Open', 'Closed'],
-                    datasets: [{
-                        data: [counts.open, counts.closed],
-                        backgroundColor: ['#d97706', '#16a34a'],
-                        borderWidth: 2,
-                        borderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } }
-                }
-            });
-
-            const catLabels = data.category_stats.map(r => r.category);
-            const catTotals = data.category_stats.map(r => r.total);
-            new Chart(document.getElementById('categoryChart'), {
+            new Chart(document.getElementById('zoneDailyChart'), {
                 type: 'bar',
                 data: {
-                    labels: catLabels,
-                    datasets: [{
-                        label: 'Total',
-                        data: catTotals,
-                        backgroundColor: '#2563eb',
-                        borderRadius: 6
-                    }]
+                    labels: zoneDaily.dates,
+                    datasets: zoneDaily.datasets
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } }
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
                 }
             });
 
-            const weekLabels = data.weekly.map(w => w.date);
-            const weekOpen = data.weekly.map(w => w.open);
-            const weekClosed = data.weekly.map(w => w.closed);
+            const monthly = data.monthly_stats;
+            const monthLabels = monthly.map(m => m.month);
+            const monthTotal = monthly.map(m => m.total);
+            const monthOpen = monthly.map(m => m.open);
+            const monthClosed = monthly.map(m => m.closed);
 
-            new Chart(document.getElementById('weeklyChart'), {
-                type: 'line',
+            new Chart(document.getElementById('monthlyChart'), {
+                type: 'bar',
                 data: {
-                    labels: weekLabels,
+                    labels: monthLabels,
                     datasets: [
                         {
+                            label: 'Total',
+                            data: monthTotal,
+                            backgroundColor: '#2563eb',
+                            borderRadius: 4
+                        },
+                        {
                             label: 'Open',
-                            data: weekOpen,
-                            borderColor: '#d97706',
-                            backgroundColor: 'rgba(217,119,6,.1)',
-                            fill: true,
-                            tension: .4,
-                            pointRadius: 4
+                            data: monthOpen,
+                            backgroundColor: '#d97706',
+                            borderRadius: 4
                         },
                         {
                             label: 'Closed',
-                            data: weekClosed,
-                            borderColor: '#16a34a',
-                            backgroundColor: 'rgba(22,163,74,.1)',
-                            fill: true,
-                            tension: .4,
-                            pointRadius: 4
+                            data: monthClosed,
+                            backgroundColor: '#16a34a',
+                            borderRadius: 4
                         }
                     ]
                 },

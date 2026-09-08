@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 
 from extensions import db
 from models import User, Rule, Audit, Alert, MailLog
+from sqlalchemy import case
 
 
 load_dotenv()
@@ -254,36 +255,86 @@ def dashboard():
 def charts_data():
     counts = get_status_counts()
 
-    category_stats = []
-    categories = db.session.query(Audit.nc_category, db.func.count(Audit.id)).group_by(Audit.nc_category).all()
-    for cat, count in categories:
-        category_stats.append({
-            'category': cat,
-            'total': count,
+    today = date.today()
+    last_5_days = [today - timedelta(days=i) for i in range(4, -1, -1)]
+    zones = [z[0] for z in db.session.query(Audit.ygct_plant1).distinct().order_by(Audit.ygct_plant1).all()]
+
+    last_5_days_zones = {
+        'dates': [d.strftime('%d %b') for d in last_5_days],
+        'zones': zones,
+        'datasets': []
+    }
+
+    for zone in zones:
+        open_data = []
+        closed_data = []
+        for day in last_5_days:
+            day_open = Audit.query.filter(
+                Audit.ygct_plant1 == zone,
+                Audit.status == 'open',
+                Audit.audit_date == day
+            ).count()
+            day_closed = Audit.query.filter(
+                Audit.ygct_plant1 == zone,
+                Audit.status == 'closed',
+                Audit.audit_date == day
+            ).count()
+            open_data.append(day_open)
+            closed_data.append(day_closed)
+
+        last_5_days_zones['datasets'].append({
+            'label': f'{zone} - Open',
+            'data': open_data,
+            'backgroundColor': 'rgba(217,119,6,0.85)',
+            'borderColor': 'rgba(217,119,6,1)',
+            'borderWidth': 1,
+            'borderRadius': 4
+        })
+        last_5_days_zones['datasets'].append({
+            'label': f'{zone} - Closed',
+            'data': closed_data,
+            'backgroundColor': 'rgba(22,163,74,0.85)',
+            'borderColor': 'rgba(22,163,74,1)',
+            'borderWidth': 1,
+            'borderRadius': 4
         })
 
-    today = date.today()
-    weekly = []
-    for i in range(6, -1, -1):
-        day = today - timedelta(days=i)
-        day_open = Audit.query.filter(
-            Audit.status == 'open',
-            db.func.date(Audit.created_at) == day
-        ).count()
-        day_closed = Audit.query.filter(
-            Audit.status == 'closed',
-            db.func.date(Audit.created_at) == day
-        ).count()
-        weekly.append({
-            'date': day.strftime('%d %b'),
-            'open': day_open,
-            'closed': day_closed,
+    monthly_results = db.session.query(
+        db.func.strftime('%Y-%m', Audit.audit_date).label('month'),
+        db.func.count(Audit.id).label('total'),
+        db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
+        db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
+    ).group_by('month').order_by('month').all()
+
+    monthly_map = {}
+    for r in monthly_results:
+        monthly_map[r.month] = {
+            'total': r.total or 0,
+            'open': r.open or 0,
+            'closed': r.closed or 0
+        }
+
+    monthly_stats = []
+    for i in range(11, -1, -1):
+        m = today.month - i
+        y = today.year
+        while m <= 0:
+            m += 12
+            y -= 1
+        month_key = f"{y:04d}-{m:02d}"
+        month_label = date(y, m, 1).strftime('%b %Y')
+        stats = monthly_map.get(month_key, {'total': 0, 'open': 0, 'closed': 0})
+        monthly_stats.append({
+            'month': month_label,
+            'total': stats['total'],
+            'open': stats['open'],
+            'closed': stats['closed']
         })
 
     return jsonify({
         'counts': counts,
-        'category_stats': category_stats,
-        'weekly': weekly,
+        'last_5_days_zones': last_5_days_zones,
+        'monthly_stats': monthly_stats,
     })
 
 
