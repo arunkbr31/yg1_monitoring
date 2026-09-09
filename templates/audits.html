@@ -48,20 +48,35 @@
             {% if messages %}
             <div class="flash-container">
                 {% for category, message in messages %}
-                <div class="flash flash-{{ category }}">{{ message }}</div>
+                <div class="flash flash-{{ category }}">
+                    <span class="flash-icon">{% if category == 'success' %}✓{% elif category == 'error' %}✕{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}</span>
+                    <span class="flash-text">{{ message }}</span>
+                    <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                </div>
                 {% endfor %}
             </div>
             {% endif %}
         {% endwith %}
 
-        <div class="card">
+            <div class="card">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+                    <h3 style="margin:0;">All Audit Records</h3>
+                    <form method="GET" action="{{ url_for('audits') }}" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <label for="hod_search" style="font-size:13px; font-weight:600; color:var(--text-light);">Search Responsible HOD:</label>
+                        <input type="text" id="hod_search" name="hod" placeholder="e.g., John Doe" value="{{ request.args.get('hod', '') }}" style="padding:8px 12px; border:1.5px solid var(--gray-border); border-radius:8px; font-size:13px; font-family:inherit; min-width:220px;">
+                        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+                        {% if request.args.get('hod') %}
+                        <a href="{{ url_for('audits') }}" class="btn btn-outline btn-sm">Clear</a>
+                        {% endif %}
+                    </form>
+                </div>
             {% if audits %}
             <div class="table-scroll">
                 <table>
                     <thead>
                         <tr>
                             <th>Audit Date</th>
-                            <th>YGCT-Plant1</th>
+                            <th>Plants</th>
                             <th>Zonal Leader</th>
                             <th>NC Category</th>
                             <th>Description of NC</th>
@@ -78,7 +93,11 @@
                         {% for a in audits %}
                         <tr>
                             <td>{{ a.audit_date.strftime('%d %b %Y') }}</td>
-                            <td>{{ a.ygct_plant1 }}</td>
+                            <td>
+                                {% if a.ygct_plant1 %}<span class="badge badge-plant1">{{ a.ygct_plant1 }}</span> {% endif %}
+                                {% if a.ygct_plant2 %}<span class="badge badge-plant2">{{ a.ygct_plant2 }}</span> {% endif %}
+                                {% if a.ygct_plant3 %}<span class="badge badge-plant3">{{ a.ygct_plant3 }}</span> {% endif %}
+                            </td>
                             <td>{{ a.zonal_leader }}</td>
                             <td>{{ a.nc_category }}</td>
                             <td>{{ a.description[:60] }}{% if a.description|length > 60 %}...{% endif %}</td>

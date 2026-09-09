@@ -45,7 +45,11 @@
             {% if messages %}
             <div class="flash-container">
                 {% for category, message in messages %}
-                <div class="flash flash-{{ category }}">{{ message }}</div>
+                <div class="flash flash-{{ category }}">
+                    <span class="flash-icon">{% if category == 'success' %}✓{% elif category == 'error' %}✕{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}</span>
+                    <span class="flash-text">{{ message }}</span>
+                    <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                </div>
                 {% endfor %}
             </div>
             {% endif %}
@@ -58,8 +62,16 @@
                     <input type="date" id="audit_date" name="audit_date" required value="{{ audit.audit_date.strftime('%Y-%m-%d') if audit else (form.audit_date if form else '') }}">
                 </div>
                 <div class="form-group">
-                    <label for="ygct_plant1">YGCT-Plant1 *</label>
-                    <input type="text" id="ygct_plant1" name="ygct_plant1" placeholder="e.g., YGCT-Plant1" required value="{{ audit.ygct_plant1 if audit else (form.ygct_plant1 if form else '') }}">
+                    <label for="ygct_plant1">YGCT-Plant1</label>
+                    <input type="text" id="ygct_plant1" name="ygct_plant1" placeholder="e.g., Plant1" value="{{ audit.ygct_plant1 if audit else (form.ygct_plant1 if form else '') }}">
+                </div>
+                <div class="form-group">
+                    <label for="ygct_plant2">YGCT-Plant2</label>
+                    <input type="text" id="ygct_plant2" name="ygct_plant2" placeholder="e.g., Plant2" value="{{ audit.ygct_plant2 if audit else (form.ygct_plant2 if form else '') }}">
+                </div>
+                <div class="form-group">
+                    <label for="ygct_plant3">YGCT-Plant3</label>
+                    <input type="text" id="ygct_plant3" name="ygct_plant3" placeholder="e.g., Plant3" value="{{ audit.ygct_plant3 if audit else (form.ygct_plant3 if form else '') }}">
                 </div>
                 <div class="form-group">
                     <label for="zonal_leader">Zonal Leader *</label>

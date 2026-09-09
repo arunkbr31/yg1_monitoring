@@ -41,6 +41,8 @@ class Audit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     audit_date = db.Column(db.Date, nullable=False)
     ygct_plant1 = db.Column(db.String(100), nullable=False)
+    ygct_plant2 = db.Column(db.String(100), nullable=False, default='')
+    ygct_plant3 = db.Column(db.String(100), nullable=False, default='')
     zonal_leader = db.Column(db.String(100), nullable=False)
     nc_category = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)

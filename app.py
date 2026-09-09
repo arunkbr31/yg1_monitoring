@@ -409,7 +409,11 @@ def delete_rule(rule_id):
 @app.route('/audits')
 @login_required
 def audits():
-    all_audits = Audit.query.order_by(Audit.created_at.desc()).all()
+    hod_query = request.args.get('hod', '').strip()
+    query = Audit.query.order_by(Audit.created_at.desc())
+    if hod_query:
+        query = query.filter(Audit.responsible_hod.ilike(f'%{hod_query}%'))
+    all_audits = query.all()
     return render_template('audits.html', audits=all_audits)
 
 
@@ -419,6 +423,8 @@ def add_audit():
     if request.method == 'POST':
         audit_date = parse_date(request.form.get('audit_date', ''))
         ygct_plant1 = request.form.get('ygct_plant1', '').strip()
+        ygct_plant2 = request.form.get('ygct_plant2', '').strip()
+        ygct_plant3 = request.form.get('ygct_plant3', '').strip()
         zonal_leader = request.form.get('zonal_leader', '').strip()
         nc_category = request.form.get('nc_category', '').strip()
         description = request.form.get('description', '').strip()
@@ -436,8 +442,8 @@ def add_audit():
         errors = []
         if not audit_date:
             errors.append('Audit Date is required.')
-        if not ygct_plant1:
-            errors.append('YGCT-Plant1 is required.')
+        if not ygct_plant1 and not ygct_plant2 and not ygct_plant3:
+            errors.append('At least one plant (Plant1, Plant2, or Plant3) is required.')
         if not zonal_leader:
             errors.append('Zonal Leader is required.')
         if not nc_category:
@@ -457,6 +463,8 @@ def add_audit():
         audit = Audit(
             audit_date=audit_date,
             ygct_plant1=ygct_plant1,
+            ygct_plant2=ygct_plant2,
+            ygct_plant3=ygct_plant3,
             zonal_leader=zonal_leader,
             nc_category=nc_category,
             description=description,
@@ -490,6 +498,8 @@ def edit_audit(audit_id):
     if request.method == 'POST':
         audit.audit_date = parse_date(request.form.get('audit_date', '')) or audit.audit_date
         audit.ygct_plant1 = request.form.get('ygct_plant1', '').strip()
+        audit.ygct_plant2 = request.form.get('ygct_plant2', '').strip()
+        audit.ygct_plant3 = request.form.get('ygct_plant3', '').strip()
         audit.zonal_leader = request.form.get('zonal_leader', '').strip()
         audit.nc_category = request.form.get('nc_category', '').strip()
         audit.description = request.form.get('description', '').strip()
@@ -508,8 +518,8 @@ def edit_audit(audit_id):
             audit.after_image = save_upload(after_file) or audit.after_image
 
         errors = []
-        if not audit.ygct_plant1:
-            errors.append('YGCT-Plant1 is required.')
+        if not audit.ygct_plant1 and not audit.ygct_plant2 and not audit.ygct_plant3:
+            errors.append('At least one plant (Plant1, Plant2, or Plant3) is required.')
         if not audit.zonal_leader:
             errors.append('Zonal Leader is required.')
         if not audit.nc_category:
@@ -604,10 +614,11 @@ def deactivate_user(user_id):
 
 def create_audit_alert(audit):
     subject = f"New Audit Alert: {audit.nc_category} - {audit.ygct_plant1}"
+    plant_info = f"Plant1: {audit.ygct_plant1}\nPlant2: {audit.ygct_plant2}\nPlant3: {audit.ygct_plant3}"
     body_text = (
         f"A new audit record has been created.\n\n"
         f"Audit Date: {audit.audit_date}\n"
-        f"Plant: {audit.ygct_plant1}\n"
+        f"{plant_info}\n"
         f"Zonal Leader: {audit.zonal_leader}\n"
         f"NC Category: {audit.nc_category}\n"
         f"Description: {audit.description}\n"
@@ -618,7 +629,9 @@ def create_audit_alert(audit):
     )
     body_html = (
         f"<h3>New Audit Alert: {audit.nc_category}</h3>"
-        f"<p><strong>Plant:</strong> {audit.ygct_plant1}</p>"
+        f"<p><strong>Plant1:</strong> {audit.ygct_plant1}</p>"
+        f"<p><strong>Plant2:</strong> {audit.ygct_plant2}</p>"
+        f"<p><strong>Plant3:</strong> {audit.ygct_plant3}</p>"
         f"<p><strong>Audit Date:</strong> {audit.audit_date}</p>"
         f"<p><strong>Zonal Leader:</strong> {audit.zonal_leader}</p>"
         f"<p><strong>NC Category:</strong> {audit.nc_category}</p>"

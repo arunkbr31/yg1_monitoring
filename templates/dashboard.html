@@ -48,7 +48,11 @@
             {% if messages %}
             <div class="flash-container">
                 {% for category, message in messages %}
-                <div class="flash flash-{{ category }}">{{ message }}</div>
+                <div class="flash flash-{{ category }}">
+                    <span class="flash-icon">{% if category == 'success' %}✓{% elif category == 'error' %}✕{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}</span>
+                    <span class="flash-text">{{ message }}</span>
+                    <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                </div>
                 {% endfor %}
             </div>
             {% endif %}
@@ -91,7 +95,7 @@
                     <thead>
                         <tr>
                             <th>Audit Date</th>
-                            <th>YGCT-Plant1</th>
+                            <th>Plants</th>
                             <th>NC Category</th>
                             <th>Description</th>
                             <th>HOD</th>
@@ -102,7 +106,11 @@
                         {% for a in audits[:10] %}
                         <tr>
                             <td>{{ a.audit_date.strftime('%d %b %Y') }}</td>
-                            <td>{{ a.ygct_plant1 }}</td>
+                            <td>
+                                {% if a.ygct_plant1 %}<span class="badge badge-plant1">{{ a.ygct_plant1 }}</span> {% endif %}
+                                {% if a.ygct_plant2 %}<span class="badge badge-plant2">{{ a.ygct_plant2 }}</span> {% endif %}
+                                {% if a.ygct_plant3 %}<span class="badge badge-plant3">{{ a.ygct_plant3 }}</span> {% endif %}
+                            </td>
                             <td>{{ a.nc_category }}</td>
                             <td>{{ a.description[:50] }}{% if a.description|length > 50 %}...{% endif %}</td>
                             <td>{{ a.responsible_hod }}</td>
@@ -217,6 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             });
+
         })
         .catch(err => console.error('Chart data error:', err));
 });

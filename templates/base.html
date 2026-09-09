@@ -19,6 +19,8 @@
             --danger-light: #fee2e2;
             --info: #0891b2;
             --info-light: #cffafe;
+            --purple: #7c3aed;
+            --purple-light: #ede9fe;
             --dark: #0f172a;
             --gray: #f1f5f9;
             --gray-border: #e2e8f0;
@@ -142,19 +144,91 @@
         .remember-row a:hover { text-decoration: underline; }
 
         /* Flash messages */
-        .flash-container { margin-bottom: 16px; }
+        .flash-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 420px;
+            width: calc(100% - 40px);
+        }
         .flash {
-            padding: 12px 16px;
-            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: 12px;
             font-size: 14px;
             font-weight: 500;
-            margin-bottom: 8px;
-            border-left: 4px solid;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,.12), 0 4px 8px rgba(0,0,0,.06);
+            animation: flashIn .4s cubic-bezier(.175,.885,.32,1.275);
+            position: relative;
+            overflow: hidden;
         }
-        .flash-success { background: var(--success-light); color: #166534; border-color: var(--success); }
-        .flash-error { background: var(--danger-light); color: #991b1b; border-color: var(--danger); }
-        .flash-warning { background: var(--warning-light); color: #92400e; border-color: var(--warning); }
-        .flash-info { background: var(--info-light); color: #155e75; border-color: var(--info); }
+        .flash::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 4px;
+        }
+        .flash-success {
+            background: #f0fdf4;
+            color: #166534;
+        }
+        .flash-success::before { background: var(--success); }
+        .flash-success .flash-icon { color: var(--success); }
+
+        .flash-error {
+            background: #fef2f2;
+            color: #991b1b;
+        }
+        .flash-error::before { background: var(--danger); }
+        .flash-error .flash-icon { color: var(--danger); }
+
+        .flash-warning {
+            background: #fffbeb;
+            color: #92400e;
+        }
+        .flash-warning::before { background: var(--warning); }
+        .flash-warning .flash-icon { color: var(--warning); }
+
+        .flash-info {
+            background: #ecfeff;
+            color: #155e75;
+        }
+        .flash-info::before { background: var(--info); }
+        .flash-info .flash-icon { color: var(--info); }
+
+        .flash-icon {
+            font-size: 18px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .flash-text { flex: 1; line-height: 1.4; }
+        .flash-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: inherit;
+            opacity: .5;
+            padding: 0 2px;
+            line-height: 1;
+            transition: opacity .2s;
+        }
+        .flash-close:hover { opacity: 1; }
+        @keyframes flashIn {
+            from { opacity: 0; transform: translateX(40px) scale(.95); }
+            to { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes flashOut {
+            to { opacity: 0; transform: translateX(40px) scale(.95); }
+        }
+        .flash.removing { animation: flashOut .3s ease forwards; pointer-events: none; }
 
         /* ── Sidebar layout ── */
         .layout { display: flex; height: 100vh; overflow: hidden; }
@@ -231,6 +305,7 @@
         .stat-card.red { border-left-color: var(--danger); }
         .stat-card.amber { border-left-color: var(--warning); }
         .stat-card.blue { border-left-color: var(--info); }
+        .stat-card.purple { border-left-color: var(--purple); }
         .stat-card .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-light); }
         .stat-card .value { font-size: 30px; font-weight: 800; color: var(--dark); margin-top: 6px; }
         .stat-card .sub { font-size: 12px; color: var(--text-light); margin-top: 4px; }
@@ -292,6 +367,9 @@
         }
         .badge-open { background: var(--danger-light); color: #991b1b; }
         .badge-closed { background: var(--success-light); color: #166534; }
+        .badge-plant1 { background: #dbeafe; color: #1e40af; }
+        .badge-plant2 { background: #fef3c7; color: #92400e; }
+        .badge-plant3 { background: #fce7f3; color: #9d174d; }
         .badge-compliant { background: var(--success-light); color: #166534; }
         .badge-violation { background: var(--danger-light); color: #991b1b; }
         .badge-admin { background: var(--primary-light); color: var(--primary-dark); }
@@ -366,5 +444,22 @@
 <body class="{% block body_class %}{% endblock %}">
     {% block content %}{% endblock %}
     {% block scripts %}{% endblock %}
+    <script>
+        (function() {
+            const flashes = document.querySelectorAll('.flash');
+            flashes.forEach(f => {
+                const closeBtn = f.querySelector('.flash-close');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', () => removeFlash(f));
+                }
+                setTimeout(() => removeFlash(f), 4000);
+            });
+            function removeFlash(el) {
+                if (el.classList.contains('removing')) return;
+                el.classList.add('removing');
+                el.addEventListener('animationend', () => el.remove());
+            }
+        })();
+    </script>
 </body>
 </html>
