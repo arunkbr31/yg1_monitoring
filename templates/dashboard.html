@@ -74,12 +74,12 @@
 
         <div class="charts-grid">
             <div class="chart-box">
-                <h3>📊 Last 5 Days - Zone wise Open vs Closed</h3>
-                <canvas id="zoneDailyChart"></canvas>
+                <h3>📅 Current Month - Open vs Closed</h3>
+                <canvas id="monthlyChart"></canvas>
             </div>
             <div class="chart-box">
-                <h3>📅 Monthly Trend (Last 12 Months)</h3>
-                <canvas id="monthlyChart"></canvas>
+                <h3>📈 Monthly Trend (From May 2025)</h3>
+                <canvas id="yearlyChart"></canvas>
             </div>
         </div>
 
@@ -135,33 +135,53 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('{{ url_for("charts_data") }}')
         .then(res => res.json())
         .then(data => {
-            const zoneDaily = data.last_5_days_zones;
+            const currentMonth = data.monthly_one_month;
 
-            new Chart(document.getElementById('zoneDailyChart'), {
-                type: 'bar',
+            new Chart(document.getElementById('monthlyChart'), {
+                type: 'doughnut',
                 data: {
-                    labels: zoneDaily.dates,
-                    datasets: zoneDaily.datasets
+                    labels: ['Open', 'Closed'],
+                    datasets: [{
+                        data: [currentMonth.open, currentMonth.closed],
+                        backgroundColor: [
+                            'rgba(217,119,6,0.85)',
+                            'rgba(22,163,74,0.85)'
+                        ],
+                        borderColor: [
+                            'rgba(217,119,6,1)',
+                            'rgba(22,163,74,1)'
+                        ],
+                        borderWidth: 2,
+                        hoverOffset: 8
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, ticks: { precision: 0 } }
-                    },
+                    cutout: '60%',
                     plugins: {
-                        legend: { position: 'bottom' }
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = currentMonth.open + currentMonth.closed;
+                                    const value = context.raw;
+                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return context.label + ': ' + value + ' (' + percentage + '%)';
+                                }
+                            }
+                        }
                     }
                 }
             });
 
-            const monthly = data.monthly_stats;
-            const monthLabels = monthly.map(m => m.month);
-            const monthTotal = monthly.map(m => m.total);
-            const monthOpen = monthly.map(m => m.open);
-            const monthClosed = monthly.map(m => m.closed);
+            const monthlyTrend = data.monthly_stats;
+            const monthLabels = monthlyTrend.map(m => m.month);
+            const monthTotal = monthlyTrend.map(m => m.total);
+            const monthOpen = monthlyTrend.map(m => m.open);
+            const monthClosed = monthlyTrend.map(m => m.closed);
 
-            new Chart(document.getElementById('monthlyChart'), {
+            new Chart(document.getElementById('yearlyChart'), {
                 type: 'bar',
                 data: {
                     labels: monthLabels,

@@ -256,54 +256,32 @@ def charts_data():
     counts = get_status_counts()
 
     today = date.today()
-    last_5_days = [today - timedelta(days=i) for i in range(4, -1, -1)]
-    zones = [z[0] for z in db.session.query(Audit.ygct_plant1).distinct().order_by(Audit.ygct_plant1).all()]
 
-    last_5_days_zones = {
-        'dates': [d.strftime('%d %b') for d in last_5_days],
-        'zones': zones,
-        'datasets': []
+    current_month_start = date(today.year, today.month, 1)
+    current_month_end = date(today.year, today.month + 1, 1) if today.month < 12 else date(today.year + 1, 1, 1)
+    current_month_results = db.session.query(
+        db.func.count(Audit.id).label('total'),
+        db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
+        db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
+    ).filter(
+        Audit.audit_date >= current_month_start,
+        Audit.audit_date < current_month_end
+    ).first()
+
+    monthly_one_month = {
+        'month': current_month_start.strftime('%B %Y'),
+        'total': current_month_results.total or 0,
+        'open': current_month_results.open or 0,
+        'closed': current_month_results.closed or 0
     }
-
-    for zone in zones:
-        open_data = []
-        closed_data = []
-        for day in last_5_days:
-            day_open = Audit.query.filter(
-                Audit.ygct_plant1 == zone,
-                Audit.status == 'open',
-                Audit.audit_date == day
-            ).count()
-            day_closed = Audit.query.filter(
-                Audit.ygct_plant1 == zone,
-                Audit.status == 'closed',
-                Audit.audit_date == day
-            ).count()
-            open_data.append(day_open)
-            closed_data.append(day_closed)
-
-        last_5_days_zones['datasets'].append({
-            'label': f'{zone} - Open',
-            'data': open_data,
-            'backgroundColor': 'rgba(217,119,6,0.85)',
-            'borderColor': 'rgba(217,119,6,1)',
-            'borderWidth': 1,
-            'borderRadius': 4
-        })
-        last_5_days_zones['datasets'].append({
-            'label': f'{zone} - Closed',
-            'data': closed_data,
-            'backgroundColor': 'rgba(22,163,74,0.85)',
-            'borderColor': 'rgba(22,163,74,1)',
-            'borderWidth': 1,
-            'borderRadius': 4
-        })
 
     monthly_results = db.session.query(
         db.func.strftime('%Y-%m', Audit.audit_date).label('month'),
         db.func.count(Audit.id).label('total'),
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
         db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
+    ).filter(
+        Audit.audit_date >= date(2025, 5, 1)
     ).group_by('month').order_by('month').all()
 
     monthly_map = {}
@@ -314,15 +292,12 @@ def charts_data():
             'closed': r.closed or 0
         }
 
+    start_month = date(2025, 5, 1)
     monthly_stats = []
-    for i in range(11, -1, -1):
-        m = today.month - i
-        y = today.year
-        while m <= 0:
-            m += 12
-            y -= 1
-        month_key = f"{y:04d}-{m:02d}"
-        month_label = date(y, m, 1).strftime('%b %Y')
+    current = start_month
+    while current <= today:
+        month_key = current.strftime('%Y-%m')
+        month_label = current.strftime('%b %Y')
         stats = monthly_map.get(month_key, {'total': 0, 'open': 0, 'closed': 0})
         monthly_stats.append({
             'month': month_label,
@@ -330,10 +305,14 @@ def charts_data():
             'open': stats['open'],
             'closed': stats['closed']
         })
+        if current.month == 12:
+            current = date(current.year + 1, 1, 1)
+        else:
+            current = date(current.year, current.month + 1, 1)
 
     return jsonify({
         'counts': counts,
-        'last_5_days_zones': last_5_days_zones,
+        'monthly_one_month': monthly_one_month,
         'monthly_stats': monthly_stats,
     })
 
