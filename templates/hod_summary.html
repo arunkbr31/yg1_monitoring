@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Rules | YG1 Monitoring{% endblock %}
+{% block title %}HOD Summary | YG1 Monitoring{% endblock %}
 {% block content %}
 <div class="layout">
     <aside class="sidebar">
@@ -14,8 +14,8 @@
             <div class="nav-label">Main</div>
             <a href="{{ url_for('dashboard') }}"><span class="icon">📊</span> <span>Dashboard</span></a>
             <a href="{{ url_for('audits') }}"><span class="icon">📍</span> <span>Audits</span></a>
-            <a href="{{ url_for('hod_summary') }}"><span class="icon">📋</span> <span>HOD Summary</span></a>
-            <a href="{{ url_for('rules') }}" class="active"><span class="icon">📋</span> <span>Rules</span></a>
+            <a href="{{ url_for('hod_summary') }}" class="active"><span class="icon">📋</span> <span>HOD Summary</span></a>
+            <a href="{{ url_for('rules') }}"><span class="icon">📋</span> <span>Rules</span></a>
             <a href="{{ url_for('alerts') }}"><span class="icon">🔔</span> <span>Alerts</span></a>
             <a href="{{ url_for('mail_logs') }}"><span class="icon">📧</span> <span>Mail Logs</span></a>
             {% if current_user.role == 'admin' %}
@@ -37,11 +37,8 @@
     <main class="main">
         <div class="page-header">
             <div>
-                <h1>Company Rules</h1>
-                <p>Define where items must be placed to maintain discipline</p>
-            </div>
-            <div class="actions">
-                <a href="{{ url_for('add_rule') }}" class="btn btn-primary">+ New Rule</a>
+                <h1>HOD Summary</h1>
+                <p>Audit status breakdown by responsible HOD</p>
             </div>
         </div>
 
@@ -59,35 +56,46 @@
             {% endif %}
         {% endwith %}
 
-        {% if rules %}
-        <div class="rule-cards">
-            {% for rule in rules %}
-            <div class="rule-card">
-                <h4>{{ rule.rule_name }}</h4>
-                <div class="meta"><strong>Item:</strong> {{ rule.item }}</div>
-                <div class="meta"><strong>Required Location:</strong> {{ rule.required_location }}</div>
-                {% if rule.description %}
-                <div class="meta"><strong>Description:</strong> {{ rule.description }}</div>
-                {% endif %}
-                <div class="rule-actions">
-                    <a href="{{ url_for('edit_rule', rule_id=rule.id) }}" class="btn btn-outline btn-sm">Edit</a>
-                    {% if current_user.role == 'admin' %}
-                    <form method="POST" action="{{ url_for('delete_rule', rule_id=rule.id) }}">
-                        <button type="submit" class="btn btn-danger btn-sm" data-confirm="Delete this rule?">Delete</button>
-                    </form>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
         <div class="card">
+            <h3>HOD Audit Summary</h3>
+            {% if hod_data %}
+            <div class="table-scroll" style="max-height: 500px; overflow: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Responsible HOD</th>
+                            <th>Open Count</th>
+                            <th>Close Count</th>
+                            <th>Total Count</th>
+                            <th>Latest Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in hod_data %}
+                        <tr>
+                            <td data-label="Responsible HOD">{{ row.responsible_hod }}</td>
+                            <td data-label="Open Count">
+                                <span class="badge badge-open">{{ row.open_count or 0 }}</span>
+                            </td>
+                            <td data-label="Close Count">
+                                <span class="badge badge-closed">{{ row.closed_count or 0 }}</span>
+                            </td>
+                            <td data-label="Total Count">
+                                <span class="badge badge-admin">{{ row.total or 0 }}</span>
+                            </td>
+                            <td data-label="Latest Date">{{ row.latest_date.strftime('%d %b %Y') if row.latest_date else '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
             <div class="empty-state">
                 <div class="icon">📋</div>
-                <p>No rules defined yet. <a href="{{ url_for('add_rule') }}" style="color:var(--primary); font-weight:600;">Create your first rule</a></p>
+                <p>No audit records found. <a href="{{ url_for('add_audit') }}" style="color:var(--primary); font-weight:600;">Create your first audit</a></p>
             </div>
+            {% endif %}
         </div>
-        {% endif %}
     </main>
 </div>
 {% endblock %}

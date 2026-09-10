@@ -584,6 +584,19 @@ def delete_audit(audit_id):
     return redirect(url_for('audits'))
 
 
+@app.route('/hod-summary')
+@login_required
+def hod_summary():
+    hod_data = db.session.query(
+        Audit.responsible_hod,
+        db.func.count(Audit.id).label('total'),
+        db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open_count'),
+        db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed_count'),
+        db.func.max(Audit.audit_date).label('latest_date')
+    ).group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
+    return render_template('hod_summary.html', hod_data=hod_data)
+
+
 @app.route('/users')
 @login_required
 def users():
