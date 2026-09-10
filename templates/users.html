@@ -69,24 +69,24 @@
                     <tbody>
                         {% for user in users %}
                         <tr>
-                            <td><strong>{{ user.username }}</strong>{% if user.id == current_user.id %} <span style="font-size:11px; color:var(--text-light);">(you)</span>{% endif %}</td>
-                            <td>{{ user.email }}</td>
-                            <td>
+                            <td data-label="Username"><strong>{{ user.username }}</strong>{% if user.id == current_user.id %} <span style="font-size:11px; color:var(--text-light);">(you)</span>{% endif %}</td>
+                            <td data-label="Email">{{ user.email }}</td>
+                            <td data-label="Role">
                                 {% if user.role == 'admin' %}
                                 <span class="badge badge-admin">Admin</span>
                                 {% else %}
                                 <span class="badge badge-coordinator">Coordinator</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Status">
                                 {% if user.is_active %}
                                 <span class="badge badge-active">Active</span>
                                 {% else %}
                                 <span class="badge badge-inactive">Inactive</span>
                                 {% endif %}
                             </td>
-                            <td>{{ user.created_at.strftime('%d %b %Y') if user.created_at else '—' }}</td>
-                            <td>
+                            <td data-label="Created">{{ user.created_at.strftime('%d %b %Y') if user.created_at else '—' }}</td>
+                            <td data-label="Actions">
                                 {% if user.id != current_user.id %}
                                 <form method="POST" action="{{ url_for('deactivate_user', user_id=user.id) }}">
                                     <button type="submit" class="btn btn-sm {% if user.is_active %}btn-warning{% else %}btn-success{% endif %}">

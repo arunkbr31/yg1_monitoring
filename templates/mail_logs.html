@@ -71,17 +71,17 @@
                     <tbody>
                         {% for log in logs %}
                         <tr>
-                            <td>{{ log.recipient }}</td>
-                            <td>{{ log.subject[:60] }}</td>
-                            <td>
+                            <td data-label="Recipient">{{ log.recipient }}</td>
+                            <td data-label="Subject">{{ log.subject[:60] }}</td>
+                            <td data-label="Status">
                                 {% if log.status == 'sent' %}
                                 <span class="badge badge-compliant">✓ Sent</span>
                                 {% else %}
                                 <span class="badge badge-violation">✗ Failed</span>
                                 {% endif %}
                             </td>
-                            <td>{{ log.error[:80] if log.error else '-' }}</td>
-                            <td>{{ log.sent_at.strftime('%d %b %Y, %H:%M:%S') }}</td>
+                            <td data-label="Error">{{ log.error[:80] if log.error else '-' }}</td>
+                            <td data-label="Time">{{ log.sent_at.strftime('%d %b %Y, %H:%M:%S') }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

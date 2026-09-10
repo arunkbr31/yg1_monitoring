@@ -78,27 +78,27 @@
                     <tbody>
                         {% for p in placements %}
                         <tr>
-                            <td><strong>{{ p.rule.item }}</strong><br><small style="color:var(--text-light);">{{ p.rule.rule_name }}</small></td>
-                            <td>{{ p.zone }}</td>
-                            <td>{{ p.current_location }}</td>
-                            <td>{{ p.rule.required_location }}</td>
-                            <td>{{ p.responsible_person }}</td>
-                            <td>{{ p.coordinator_email }}</td>
-                            <td>
+                            <td data-label="Item"><strong>{{ p.rule.item }}</strong><br><small style="color:var(--text-light);">{{ p.rule.rule_name }}</small></td>
+                            <td data-label="Zone">{{ p.zone }}</td>
+                            <td data-label="Current Location">{{ p.current_location }}</td>
+                            <td data-label="Required Location">{{ p.rule.required_location }}</td>
+                            <td data-label="Responsible">{{ p.responsible_person }}</td>
+                            <td data-label="Coordinator">{{ p.coordinator_email }}</td>
+                            <td data-label="Status">
                                 {% if p.status == 'open' %}
                                 <span class="badge badge-open">Open</span>
                                 {% else %}
                                 <span class="badge badge-closed">Closed</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Compliance">
                                 {% if p.is_compliant %}
                                 <span class="badge badge-compliant">✓ Compliant</span>
                                 {% else %}
                                 <span class="badge badge-violation">✗ Violation</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Actions">
                                 <div style="display:flex; gap:6px;">
                                     {% if p.status == 'open' %}
                                     <form method="POST" action="{{ url_for('close_placement', placement_id=p.id) }}">

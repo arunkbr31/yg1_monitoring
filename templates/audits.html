@@ -92,16 +92,16 @@
                     <tbody>
                         {% for a in audits %}
                         <tr>
-                            <td>{{ a.audit_date.strftime('%d %b %Y') }}</td>
-                            <td>
+                            <td data-label="Audit Date">{{ a.audit_date.strftime('%d %b %Y') }}</td>
+                            <td data-label="Plants">
                                 {% if a.ygct_plant1 %}<span class="badge badge-plant1">{{ a.ygct_plant1 }}</span> {% endif %}
                                 {% if a.ygct_plant2 %}<span class="badge badge-plant2">{{ a.ygct_plant2 }}</span> {% endif %}
                                 {% if a.ygct_plant3 %}<span class="badge badge-plant3">{{ a.ygct_plant3 }}</span> {% endif %}
                             </td>
-                            <td>{{ a.zonal_leader }}</td>
-                            <td>{{ a.nc_category }}</td>
-                            <td>{{ a.description[:60] }}{% if a.description|length > 60 %}...{% endif %}</td>
-                            <td>
+                            <td data-label="Zonal Leader">{{ a.zonal_leader }}</td>
+                            <td data-label="NC Category">{{ a.nc_category }}</td>
+                            <td data-label="Description">{{ a.description[:60] }}{% if a.description|length > 60 %}...{% endif %}</td>
+                            <td data-label="Before">
                                 {% if a.before_image %}
                                 <a href="{{ url_for('static', filename='uploads/' + a.before_image) }}" target="_blank">
                                     <img src="{{ url_for('static', filename='uploads/' + a.before_image) }}" alt="Before" style="max-height:60px; border-radius:6px; border:1px solid var(--gray-border); cursor:pointer;">
@@ -110,7 +110,7 @@
                                 <span style="color:var(--text-light);">-</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="After">
                                 {% if a.after_image %}
                                 <a href="{{ url_for('static', filename='uploads/' + a.after_image) }}" target="_blank">
                                     <img src="{{ url_for('static', filename='uploads/' + a.after_image) }}" alt="After" style="max-height:60px; border-radius:6px; border:1px solid var(--gray-border); cursor:pointer;">
@@ -119,17 +119,17 @@
                                 <span style="color:var(--text-light);">-</span>
                                 {% endif %}
                             </td>
-                            <td>{{ a.action_taken_details[:60] if a.action_taken_details else '-' }}{% if a.action_taken_details and a.action_taken_details|length > 60 %}...{% endif %}</td>
-                            <td>{{ a.responsible_hod }}</td>
-                            <td>{{ a.target_date.strftime('%d %b %Y') if a.target_date else '-' }}</td>
-                            <td>
+                            <td data-label="Action Taken">{{ a.action_taken_details[:60] if a.action_taken_details else '-' }}{% if a.action_taken_details and a.action_taken_details|length > 60 %}...{% endif %}</td>
+                            <td data-label="Responsible HOD">{{ a.responsible_hod }}</td>
+                            <td data-label="Target Date">{{ a.target_date.strftime('%d %b %Y') if a.target_date else '-' }}</td>
+                            <td data-label="Status">
                                 {% if a.status == 'open' %}
                                 <span class="badge badge-open">Open</span>
                                 {% else %}
                                 <span class="badge badge-closed">Closed</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td data-label="Actions">
                                 <div style="display:flex; gap:6px;">
                                     <a href="{{ url_for('edit_audit', audit_id=a.id) }}" class="btn btn-outline btn-sm">Edit</a>
                                     {% if a.status == 'open' %}

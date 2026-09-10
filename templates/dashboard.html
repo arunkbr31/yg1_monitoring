@@ -105,16 +105,16 @@
                     <tbody>
                         {% for a in audits[:10] %}
                         <tr>
-                            <td>{{ a.audit_date.strftime('%d %b %Y') }}</td>
-                            <td>
+                            <td data-label="Audit Date">{{ a.audit_date.strftime('%d %b %Y') }}</td>
+                            <td data-label="Plants">
                                 {% if a.ygct_plant1 %}<span class="badge badge-plant1">{{ a.ygct_plant1 }}</span> {% endif %}
                                 {% if a.ygct_plant2 %}<span class="badge badge-plant2">{{ a.ygct_plant2 }}</span> {% endif %}
                                 {% if a.ygct_plant3 %}<span class="badge badge-plant3">{{ a.ygct_plant3 }}</span> {% endif %}
                             </td>
-                            <td>{{ a.nc_category }}</td>
-                            <td>{{ a.description[:50] }}{% if a.description|length > 50 %}...{% endif %}</td>
-                            <td>{{ a.responsible_hod }}</td>
-                            <td>
+                            <td data-label="NC Category">{{ a.nc_category }}</td>
+                            <td data-label="Description">{{ a.description[:50] }}{% if a.description|length > 50 %}...{% endif %}</td>
+                            <td data-label="HOD">{{ a.responsible_hod }}</td>
+                            <td data-label="Status">
                                 {% if a.status == 'open' %}
                                 <span class="badge badge-open">Open</span>
                                 {% else %}
