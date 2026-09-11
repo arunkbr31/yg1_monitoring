@@ -519,6 +519,42 @@
         }
         .auth-body .mobile-menu-btn { display: none !important; }
 
+        /* Timeout Warning Notification */
+        .timeout-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100001;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,.2);
+            padding: 20px 24px;
+            max-width: 380px;
+            width: calc(100% - 40px);
+            display: none;
+            align-items: flex-start;
+            gap: 14px;
+            border-left: 4px solid var(--warning);
+            animation: slideInRight .4s cubic-bezier(.175,.885,.32,1.275);
+        }
+        .timeout-notification.active { display: flex; }
+        .timeout-notification .timeout-icon { font-size: 28px; flex-shrink: 0; }
+        .timeout-notification .timeout-content { flex: 1; }
+        .timeout-notification .timeout-content h4 { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+        .timeout-notification .timeout-content p { font-size: 13px; color: var(--text-light); margin-bottom: 10px; line-height: 1.4; }
+        .timeout-notification .timeout-timer { font-size: 28px; font-weight: 800; color: var(--warning); margin-bottom: 12px; }
+        .timeout-notification .timeout-actions { display: flex; gap: 8px; }
+        .timeout-notification .timeout-actions .btn { padding: 8px 16px; font-size: 13px; }
+        .timeout-notification .timeout-close {
+            background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-light);
+            padding: 0; line-height: 1; transition: color .2s;
+        }
+        .timeout-notification .timeout-close:hover { color: var(--dark); }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(60px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
         /* Loading Overlay */
         .loading-overlay {
             position: fixed; inset: 0;
@@ -583,6 +619,19 @@
         <div class="loading-spinner"></div>
         <div class="loading-text">Loading...</div>
     </div>
+    <div class="timeout-notification" id="timeoutNotification">
+        <div class="timeout-icon">⏰</div>
+        <div class="timeout-content">
+            <h4>Session Expiring Soon</h4>
+            <p>You will be logged out due to inactivity in <span id="timeoutTimer">60</span> seconds.</p>
+            <div class="timeout-timer" id="timeoutTimerDisplay">60</div>
+            <div class="timeout-actions">
+                <button class="btn btn-outline" id="timeoutCancel">Logout Now</button>
+                <button class="btn btn-primary" id="timeoutStay">Stay Logged In</button>
+            </div>
+        </div>
+        <button class="timeout-close" id="timeoutClose">&times;</button>
+    </div>
     <div class="modal-overlay" id="confirmModal">
         <div class="modal-box">
             <div class="modal-icon">⚠️</div>
@@ -619,6 +668,82 @@
                     showLoading();
                 }
             });
+
+            // Idle timeout: 5 minutes idle, warn at 4 minutes
+            const IDLE_LIMIT = 5 * 60 * 1000;
+            const WARN_AT = 4 * 60 * 1000;
+            let idleTimer = null;
+            let warnTimer = null;
+            let countdownInterval = null;
+            const timeoutNotification = document.getElementById('timeoutNotification');
+            const timeoutTimerEl = document.getElementById('timeoutTimer');
+            const timeoutTimerDisplay = document.getElementById('timeoutTimerDisplay');
+            const timeoutStayBtn = document.getElementById('timeoutStay');
+            const timeoutCancelBtn = document.getElementById('timeoutCancel');
+            const timeoutCloseBtn = document.getElementById('timeoutClose');
+
+            function resetIdleTimer() {
+                clearTimeout(idleTimer);
+                clearTimeout(warnTimer);
+                clearInterval(countdownInterval);
+                hideTimeoutNotification();
+                warnTimer = setTimeout(showTimeoutWarning, WARN_AT);
+                idleTimer = setTimeout(logoutDueToIdle, IDLE_LIMIT);
+            }
+
+            function showTimeoutWarning() {
+                if (!timeoutNotification) return;
+                timeoutNotification.classList.add('active');
+                let remaining = 60;
+                if (timeoutTimerEl) timeoutTimerEl.textContent = remaining;
+                if (timeoutTimerDisplay) timeoutTimerDisplay.textContent = remaining;
+                countdownInterval = setInterval(function() {
+                    remaining -= 1;
+                    if (timeoutTimerEl) timeoutTimerEl.textContent = remaining;
+                    if (timeoutTimerDisplay) timeoutTimerDisplay.textContent = remaining;
+                    if (remaining <= 0) {
+                        clearInterval(countdownInterval);
+                        logoutDueToIdle();
+                    }
+                }, 1000);
+            }
+
+            function hideTimeoutNotification() {
+                if (timeoutNotification) timeoutNotification.classList.remove('active');
+            }
+
+            function logoutDueToIdle() {
+                clearTimeout(idleTimer);
+                clearTimeout(warnTimer);
+                clearInterval(countdownInterval);
+                hideTimeoutNotification();
+                window.location.href = '/logout';
+            }
+
+            ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(function(evt) {
+                document.addEventListener(evt, function() {
+                    if (timeoutNotification && timeoutNotification.classList.contains('active')) return;
+                    resetIdleTimer();
+                });
+            });
+
+            if (timeoutStayBtn) {
+                timeoutStayBtn.addEventListener('click', function() {
+                    resetIdleTimer();
+                });
+            }
+            if (timeoutCancelBtn) {
+                timeoutCancelBtn.addEventListener('click', function() {
+                    logoutDueToIdle();
+                });
+            }
+            if (timeoutCloseBtn) {
+                timeoutCloseBtn.addEventListener('click', function() {
+                    logoutDueToIdle();
+                });
+            }
+            resetIdleTimer();
+
             const flashes = document.querySelectorAll('.flash');
             flashes.forEach(f => {
                 const closeBtn = f.querySelector('.flash-close');
