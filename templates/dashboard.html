@@ -61,29 +61,29 @@
 
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="label">Total Audits</div>
+                <div class="label">Total Observations</div>
                 <div class="value">{{ counts.total }}</div>
                 <div class="sub">All records</div>
             </div>
             <div class="stat-card amber">
-                <div class="label">Open</div>
+                <div class="label">Total Open</div>
                 <div class="value">{{ counts.open }}</div>
                 <div class="sub">Pending action</div>
             </div>
             <div class="stat-card blue">
-                <div class="label">Closed</div>
+                <div class="label">Total Closed</div>
                 <div class="value">{{ counts.closed }}</div>
                 <div class="sub">Resolved</div>
             </div>
         </div>
 
-        <div class="charts-grid">
+         <div class="charts-grid">
             <div class="chart-box">
-                <h3>📅 Current Month - Open vs Closed</h3>
-                <canvas id="monthlyChart"></canvas>
+                <h3>🏢 Total Zones - Observation by Status</h3>
+                <canvas id="zoneChart"></canvas>
             </div>
             <div class="chart-box">
-                <h3>📈 Monthly Trend (From May 2025)</h3>
+                <h3>📈 Current Year Trend</h3>
                 <canvas id="yearlyChart"></canvas>
             </div>
         </div>
@@ -144,41 +144,49 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('{{ url_for("charts_data") }}')
         .then(res => res.json())
         .then(data => {
-            const currentMonth = data.monthly_one_month;
+            const zoneStats = data.zone_stats;
+            const zoneLabels = zoneStats.map(z => z.zone);
+            const zoneTotal = zoneStats.map(z => z.total);
+            const zoneOpen = zoneStats.map(z => z.open);
+            const zoneClosed = zoneStats.map(z => z.closed);
 
-            new Chart(document.getElementById('monthlyChart'), {
-                type: 'doughnut',
+            new Chart(document.getElementById('zoneChart'), {
+                type: 'bar',
                 data: {
-                    labels: ['Open', 'Closed'],
-                    datasets: [{
-                        data: [currentMonth.open, currentMonth.closed],
-                        backgroundColor: [
-                            'rgba(217,119,6,0.85)',
-                            'rgba(22,163,74,0.85)'
-                        ],
-                        borderColor: [
-                            'rgba(217,119,6,1)',
-                            'rgba(22,163,74,1)'
-                        ],
-                        borderWidth: 2,
-                        hoverOffset: 8
-                    }]
+                    labels: zoneLabels,
+                    datasets: [
+                        {
+                            label: 'Total Observations',
+                            data: zoneTotal,
+                            backgroundColor: '#2563eb',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Open',
+                            data: zoneOpen,
+                            backgroundColor: '#d97706',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Closed',
+                            data: zoneClosed,
+                            backgroundColor: '#16a34a',
+                            borderRadius: 4
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    cutout: '60%',
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 }, stacked: true },
+                        x: { stacked: true }
+                    },
                     plugins: {
                         legend: { position: 'bottom' },
                         tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const total = currentMonth.open + currentMonth.closed;
-                                    const value = context.raw;
-                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
-                                    return context.label + ': ' + value + ' (' + percentage + '%)';
-                                }
-                            }
+                            mode: 'index',
+                            intersect: false
                         }
                     }
                 }

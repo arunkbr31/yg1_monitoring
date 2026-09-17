@@ -1,5 +1,6 @@
 import os
 import smtplib
+import resend
 import ssl
 import uuid
 from datetime import datetime, date, timedelta
@@ -257,23 +258,21 @@ def charts_data():
 
     today = date.today()
 
-    current_month_start = date(today.year, today.month, 1)
-    current_month_end = date(today.year, today.month + 1, 1) if today.month < 12 else date(today.year + 1, 1, 1)
-    current_month_results = db.session.query(
+    zone_results = db.session.query(
+        Audit.responsible_hod,
         db.func.count(Audit.id).label('total'),
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
         db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
-    ).filter(
-        Audit.audit_date >= current_month_start,
-        Audit.audit_date < current_month_end
-    ).first()
+    ).group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
 
-    monthly_one_month = {
-        'month': current_month_start.strftime('%B %Y'),
-        'total': current_month_results.total or 0,
-        'open': current_month_results.open or 0,
-        'closed': current_month_results.closed or 0
-    }
+    zone_stats = []
+    for r in zone_results:
+        zone_stats.append({
+            'zone': r.responsible_hod or 'Unknown',
+            'total': r.total or 0,
+            'open': r.open or 0,
+            'closed': r.closed or 0
+        })
 
     monthly_results = db.session.query(
         db.func.strftime('%Y-%m', Audit.audit_date).label('month'),
@@ -281,7 +280,7 @@ def charts_data():
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
         db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
     ).filter(
-        Audit.audit_date >= date(2025, 5, 1)
+        Audit.audit_date >= date(today.year, 1, 1)
     ).group_by('month').order_by('month').all()
 
     monthly_map = {}
@@ -292,7 +291,7 @@ def charts_data():
             'closed': r.closed or 0
         }
 
-    start_month = date(2025, 5, 1)
+    start_month = date(today.year, 1, 1)
     monthly_stats = []
     current = start_month
     while current <= today:
@@ -312,7 +311,7 @@ def charts_data():
 
     return jsonify({
         'counts': counts,
-        'monthly_one_month': monthly_one_month,
+        'zone_stats': zone_stats,
         'monthly_stats': monthly_stats,
     })
 
@@ -728,26 +727,35 @@ def resend_alert(alert_id):
 @app.route('/test-email')
 @login_required
 def test_email():
-    test_email = request.args.get('email', '')
-    if not test_email:
-        return 'Usage: /test-email?email=you@example.com', 400
-    
-    smtp_host = os.getenv('SMTP_HOST', '').strip()
-    smtp_user = os.getenv('SMTP_USERNAME', '').strip()
-    smtp_pass = os.getenv('SMTP_PASSWORD', '').strip()
-    
-    if not smtp_host or not smtp_user or not smtp_pass:
-        return f"SMTP not configured. Set SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD in .env file. Current: host={smtp_host or 'MISSING'}, user={smtp_user or 'MISSING'}, pass={'SET' if smtp_pass else 'MISSING'}", 500
-    
-    sent, error_msg = send_email(
-        test_email,
-        'Test Email from YG1 Monitor',
-        'This is a test email. If you receive this, SMTP is configured correctly.',
-        '<h3>Test Email</h3><p>This is a test email from YG1 Monitor.</p>'
-    )
-    if sent:
-        return f"Email sent to {test_email}", 200
-    return f"Email failed: {error_msg}", 500
+    try:
+        resend.api_key = os.getenv('RESEND_API_KEY')
+
+        if not resend.api_key:
+            return 'RESEND_API_KEY is missing in .env file', 500
+
+        recipient = request.args.get('email', '').strip()
+
+        if not recipient:
+            return 'Usage: /test-email?email=your@email.com', 400
+
+        params = {
+            "from": os.getenv('RESEND_FROM_EMAIL', 'onboarding@resend.dev'),
+            "to": [recipient],
+            "subject": "YG1 Monitoring - Test Email",
+            "html": """
+                <h2>YG1 Monitoring System</h2>
+                <p>Hello,</p>
+                <p>This is a test email from the YG1 Monitoring System.</p>
+                <p>Resend email integration is working successfully.</p>
+            """
+        }
+
+        response = resend.Emails.send(params)
+
+        return f"Email sent successfully to {recipient}! Response: {response}", 200
+
+    except Exception as e:
+        return f"Email failed: {str(e)}", 500
 
 
 if __name__ == '__main__':
@@ -762,3 +770,5 @@ if __name__ == '__main__':
             print('[OK] Default admin created: username="admin" password="Admin@123"')
 
     app.run(debug=True)
+    
+    
