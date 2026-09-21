@@ -55,10 +55,12 @@ def save_upload(file_storage):
 def parse_date(value):
     if not value:
         return None
-    try:
-        return datetime.strptime(value, '%Y-%m-%d').date()
-    except (ValueError, TypeError):
-        return None
+    for fmt in ('%d-%m-%Y', '%Y-%m-%d'):
+        try:
+            return datetime.strptime(value, fmt).date()
+        except (ValueError, TypeError):
+            continue
+    return None
 
 
 db.init_app(app)
