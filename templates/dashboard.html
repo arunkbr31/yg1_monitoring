@@ -83,6 +83,14 @@
                 <canvas id="zoneChart"></canvas>
             </div>
             <div class="chart-box">
+                <h3>📅 5S Non-Conformity Status - Plant2</h3>
+                <canvas id="zoneChart2"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>📅 5S Non-Conformity Status - Plant3</h3>
+                <canvas id="zoneChart3"></canvas>
+            </div>
+            <div class="chart-box">
                 <h3>📈 Current Year Trend</h3>
                 <canvas id="yearlyChart"></canvas>
             </div>
@@ -144,53 +152,54 @@ document.addEventListener('DOMContentLoaded', function() {
     fetch('{{ url_for("charts_data") }}')
         .then(res => res.json())
         .then(data => {
-            const zoneStats = data.zone_stats;
-            const zoneLabels = zoneStats.map(z => z.zone);
-            const zoneTotal = zoneStats.map(z => z.total);
-            const zoneOpen = zoneStats.map(z => z.open);
-            const zoneClosed = zoneStats.map(z => z.closed);
-
-            new Chart(document.getElementById('zoneChart'), {
-                type: 'bar',
-                data: {
-                    labels: zoneLabels,
-                    datasets: [
-                        {
-                            label: 'Total Observations',
-                            data: zoneTotal,
-                            backgroundColor: '#1e3a8a',
-                            borderRadius: 4
-                        },
-                        {
-                            label: 'Open',
-                            data: zoneOpen,
-                            backgroundColor: '#dc2626',
-                            borderRadius: 4
-                        },
-                        {
-                            label: 'Closed',
-                            data: zoneClosed,
-                            backgroundColor: '#16a34a',
-                            borderRadius: 4
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, ticks: { precision: 0 }, stacked: true },
-                        x: { stacked: true }
+            const createPlantChart = function(canvasId, stats) {
+                const labels = stats.map(z => z.hod);
+                new Chart(document.getElementById(canvasId), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Total Observations',
+                                data: stats.map(z => z.total),
+                                backgroundColor: '#1e3a8a',
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Open',
+                                data: stats.map(z => z.open),
+                                backgroundColor: '#dc2626',
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Closed',
+                                data: stats.map(z => z.closed),
+                                backgroundColor: '#16a34a',
+                                borderRadius: 4
+                            }
+                        ]
                     },
-                    plugins: {
-                        legend: { position: 'bottom' },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0 }, stacked: true },
+                            x: { stacked: true }
+                        },
+                        plugins: {
+                            legend: { position: 'bottom' },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
                         }
                     }
-                }
-            });
+                });
+            };
+
+            createPlantChart('zoneChart', data.plant1_stats);
+            createPlantChart('zoneChart2', data.plant2_stats);
+            createPlantChart('zoneChart3', data.plant3_stats);
 
             const monthlyTrend = data.monthly_stats;
             const monthLabels = monthlyTrend.map(m => m.month);

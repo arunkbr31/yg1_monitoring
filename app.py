@@ -258,17 +258,49 @@ def charts_data():
 
     today = date.today()
 
-    zone_results = db.session.query(
+    plant1_results = db.session.query(
         Audit.responsible_hod,
         db.func.count(Audit.id).label('total'),
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
         db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
-    ).group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
+    ).filter(Audit.ygct_plant1 != '').group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
 
-    zone_stats = []
-    for r in zone_results:
-        zone_stats.append({
-            'zone': r.responsible_hod or 'Unknown',
+    plant1_stats = []
+    for r in plant1_results:
+        plant1_stats.append({
+            'hod': r.responsible_hod or 'Unknown',
+            'total': r.total or 0,
+            'open': r.open or 0,
+            'closed': r.closed or 0
+        })
+
+    plant2_results = db.session.query(
+        Audit.responsible_hod,
+        db.func.count(Audit.id).label('total'),
+        db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
+        db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
+    ).filter(Audit.ygct_plant2 != '').group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
+
+    plant2_stats = []
+    for r in plant2_results:
+        plant2_stats.append({
+            'hod': r.responsible_hod or 'Unknown',
+            'total': r.total or 0,
+            'open': r.open or 0,
+            'closed': r.closed or 0
+        })
+
+    plant3_results = db.session.query(
+        Audit.responsible_hod,
+        db.func.count(Audit.id).label('total'),
+        db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
+        db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
+    ).filter(Audit.ygct_plant3 != '').group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
+
+    plant3_stats = []
+    for r in plant3_results:
+        plant3_stats.append({
+            'hod': r.responsible_hod or 'Unknown',
             'total': r.total or 0,
             'open': r.open or 0,
             'closed': r.closed or 0
@@ -311,7 +343,9 @@ def charts_data():
 
     return jsonify({
         'counts': counts,
-        'zone_stats': zone_stats,
+        'plant1_stats': plant1_stats,
+        'plant2_stats': plant2_stats,
+        'plant3_stats': plant3_stats,
         'monthly_stats': monthly_stats,
     })
 
