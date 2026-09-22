@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}HOD Summary | YG1 Monitoring{% endblock %}
+{% block body_class %}hod-summary-page{% endblock %}
 {% block content %}
 <div class="layout">
     <aside class="sidebar">
@@ -58,6 +59,7 @@
 
         <div class="card">
             <h3>HOD Audit Summary</h3>
+            <p style="font-size:13px; color:var(--text-light); margin-bottom:12px;">{{ hod_data|length }} HOD{{ hod_data|length != 1 and 's' or '' }} listed</p>
             {% if hod_data %}
             <div class="table-scroll">
                 <table>

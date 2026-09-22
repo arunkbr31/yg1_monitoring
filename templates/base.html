@@ -345,10 +345,9 @@
         tbody tr:hover { background: #f8fafc; }
         tbody tr:last-child td { border-bottom: none; }
 
-        /* Scrollable table - fixed width, vertical scroll only, 5 rows visible */
+        /* Scrollable table - vertical & horizontal scroll, 5 rows visible */
         .table-scroll {
-            overflow-y: auto;
-            overflow-x: hidden;
+            overflow: auto;
             max-height: 290px;
             border: 1px solid var(--gray-border);
             border-radius: 8px;
@@ -361,6 +360,35 @@
             box-shadow: 0 1px 0 var(--gray-border);
         }
         tbody tr:nth-child(even) { background: #fafbfc; }
+
+        /* HOD Summary - fix table (no horizontal scroll), remove page-level vertical scroll */
+        .hod-summary-page .table-scroll { overflow-x: hidden; }
+        .hod-summary-page .main { overflow-y: hidden; }
+
+        /* HOD Summary table enhancements */
+        .table-scroll table { box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+        .table-scroll thead th {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            color: var(--dark);
+            font-size: 11px;
+        }
+        .table-scroll tbody td {
+            padding: 12px 14px;
+            font-size: 14px;
+        }
+        /* Column widths - scoped to HOD Summary only (5-column layout) */
+        .hod-summary-page .table-scroll tbody td:nth-child(1) { width: 40%; }
+        .hod-summary-page .table-scroll tbody td:nth-child(2),
+        .hod-summary-page .table-scroll tbody td:nth-child(3),
+        .hod-summary-page .table-scroll tbody td:nth-child(4),
+        .hod-summary-page .table-scroll tbody td:nth-child(5) { width: 15%; text-align: center; }
+        .hod-summary-page .table-scroll thead th:nth-child(2),
+        .hod-summary-page .table-scroll thead th:nth-child(3),
+        .hod-summary-page .table-scroll thead th:nth-child(4),
+        .hod-summary-page .table-scroll thead th:nth-child(5) { text-align: center; }
+        .table-scroll .badge { font-size: 12px; font-weight: 700; }
+        .table-scroll tbody tr:hover { background: #f0f7ff; }
+        .table-scroll tbody tr:hover .link-btn { background: var(--primary-light); }
 
         .badge {
             display: inline-block;
@@ -467,6 +495,11 @@
             .table-wrap, .table-scroll { border: none; }
             thead { display: none; }
             tbody, tbody tr, tbody td { display: block; width: 100%; }
+            .hod-summary-page .table-scroll tbody td:nth-child(1),
+            .hod-summary-page .table-scroll tbody td:nth-child(2),
+            .hod-summary-page .table-scroll tbody td:nth-child(3),
+            .hod-summary-page .table-scroll tbody td:nth-child(4),
+            .hod-summary-page .table-scroll tbody td:nth-child(5) { width: 100%; }
             tbody tr { margin-bottom: 16px; padding: 16px; background: white; border-radius: var(--radius); box-shadow: var(--shadow); }
             tbody td { padding: 8px 0; border-bottom: 1px solid var(--gray-border); display: flex; justify-content: space-between; align-items: center; }
             tbody td:last-child { border-bottom: none; }
