@@ -1,4 +1,4 @@
-`{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Login | YG1 Monitoring{% endblock %}
 {% block body_class %}auth-body{% endblock %}
 {% block mobile_menu_btn %}{% endblock %}
@@ -7,7 +7,7 @@
     <div class="auth-logo">
         <div class="logo-badge"><img src="{{ url_for('static', filename='images/yg1_images.png') }}" alt="YG1 Logo"></div>
         <h1>YG1 Monitoring System</h1>
-        <p>Company Rules & Discipline Tracker</p>
+        <p>Rules & Discipline Tracker</p>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -25,12 +25,12 @@
     {% endwith %}
 
     <form method="POST" action="{{ url_for('login') }}">
-        <div class="form-group">
-            <label for="username">Username</label>
+        <div class="auth-form-group">
+            <label for="username">🔧 Username</label>
             <input type="text" id="username" name="username" placeholder="Enter your username" required autofocus>
         </div>
-        <div class="form-group">
-            <label for="password">Password</label>
+        <div class="auth-form-group">
+            <label for="password">🔒 Password</label>
             <input type="password" id="password" name="password" placeholder="Enter your password" required>
         </div>
 
@@ -45,8 +45,8 @@
     </form>
 
     <div style="text-align:center; margin-top:20px; font-size:12px; color:var(--text-light);">
-        <p>Secure company monitoring portal</p>
-        <p>🔒 All sessions are encrypted & protected</p>
+        <p>🔒 Secure industrial monitoring portal</p>
+        <p>YG1 Tools — Audit & Compliance System</p>
     </div>
 </div>
 {% endblock %}
