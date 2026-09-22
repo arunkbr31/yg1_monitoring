@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Alerts | YG1 Monitoring{% endblock %}
+{% block body_class %}alerts-page{% endblock %}
 {% block content %}
 <div class="layout">
     <aside class="sidebar">
@@ -56,9 +57,10 @@
             {% endif %}
         {% endwith %}
 
-        <div class="card">
-            {% if alerts %}
-            <div class="alerts-scroll">
+    <div class="card">
+        {% if alerts %}
+        <p style="font-size:13px; color:var(--text-light); margin-bottom:12px;">{{ alerts|length }} alert{{ alerts|length != 1 and 's' or '' }} listed</p>
+        <div class="alerts-scroll">
                 <div class="alerts-list">
                 {% for alert in alerts %}
                 <div class="alert-item {% if alert.acknowledged %}resolved{% endif %}">

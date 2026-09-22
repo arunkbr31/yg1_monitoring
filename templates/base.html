@@ -441,8 +441,20 @@
         .alert-item .alert-content span { font-size: 12px; color: var(--text-light); display: block; }
         .alert-item .alert-content .alert-meta { margin-top: 4px; font-size: 11px; color: #94a3b8; }
         .alert-item .alert-actions { display: flex; gap: 6px; flex-shrink: 0; }
-        .alerts-scroll { overflow: auto; max-height: 420px; border: 1px solid var(--gray-border); border-radius: 8px; padding: 10px; }
-        .alerts-scroll .alerts-list { gap: 8px; }
+        .alerts-scroll {
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-height: 310px;
+            border: 1px solid var(--gray-border);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .alerts-scroll .alerts-list { gap: 10px; }
+        .alerts-scroll .alert-item { transition: transform .15s, box-shadow .15s; }
+        .alerts-scroll .alert-item:hover { transform: translateX(2px); box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+        .alerts-scroll .alert-item:nth-child(even) { background: #fefef8; }
+        /* Alerts page - remove page-level vertical scroll */
+        .alerts-page .main { overflow-y: hidden; }
 
         .rule-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .rule-card {
