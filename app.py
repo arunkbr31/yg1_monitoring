@@ -632,6 +632,35 @@ def hod_summary():
     return render_template('hod_summary.html', hod_data=hod_data)
 
 
+@app.route('/hod-summary/<path:hod>')
+@login_required
+def hod_detail(hod):
+    selected_date_str = request.args.get('date')
+    selected_date = parse_date(selected_date_str)
+
+    base_query = Audit.query.filter(
+        Audit.responsible_hod == hod
+    ).order_by(Audit.audit_date.desc(), Audit.created_at.desc())
+
+    available_dates = db.session.query(Audit.audit_date).filter(
+        Audit.responsible_hod == hod
+    ).distinct().order_by(Audit.audit_date.desc()).all()
+    available_dates = [d.audit_date for d in available_dates]
+
+    if selected_date:
+        audits = base_query.filter(Audit.audit_date == selected_date).all()
+    else:
+        audits = base_query.all()
+
+    return render_template(
+        'hod_detail.html',
+        hod=hod,
+        audits=audits,
+        available_dates=available_dates,
+        selected_date=selected_date,
+    )
+
+
 @app.route('/users')
 @login_required
 def users():

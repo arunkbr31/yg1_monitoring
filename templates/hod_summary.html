@@ -73,7 +73,9 @@
                     <tbody>
                         {% for row in hod_data %}
                         <tr>
-                            <td data-label="Responsible HOD">{{ row.responsible_hod }}</td>
+                            <td data-label="Responsible HOD">
+                                <a href="{{ url_for('hod_detail', hod=row.responsible_hod) }}" class="link-btn">{{ row.responsible_hod }}</a>
+                            </td>
                             <td data-label="Open Count">
                                 <span class="badge badge-open">{{ row.open_count or 0 }}</span>
                             </td>
