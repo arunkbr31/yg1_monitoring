@@ -345,10 +345,11 @@
         tbody tr:hover { background: #f8fafc; }
         tbody tr:last-child td { border-bottom: none; }
 
-        /* Scrollable table (placements) - fixed height, scrolls vertically & horizontally */
+        /* Scrollable table - fixed width, vertical scroll only, 5 rows visible */
         .table-scroll {
-            overflow: auto;
-            max-height: 280px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            max-height: 290px;
             border: 1px solid var(--gray-border);
             border-radius: 8px;
         }
@@ -359,6 +360,7 @@
             z-index: 10;
             box-shadow: 0 1px 0 var(--gray-border);
         }
+        tbody tr:nth-child(even) { background: #fafbfc; }
 
         .badge {
             display: inline-block;
