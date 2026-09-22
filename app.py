@@ -77,6 +77,15 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
+@app.after_request
+def set_security_headers(response):
+    if response.headers.get('Content-Type', '').startswith('text/html'):
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
+
 def send_email(to_email, subject, body_text, body_html=None):
     smtp_host = os.getenv('SMTP_HOST', '').strip()
     smtp_port = int(os.getenv('SMTP_PORT', '587') or '587')
@@ -230,9 +239,9 @@ def register():
 
 
 @app.route('/logout')
-@login_required
 def logout():
     logout_user()
+    session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
