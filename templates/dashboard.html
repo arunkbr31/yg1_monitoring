@@ -41,7 +41,7 @@
                 <p>Non-conformity audit monitoring overview</p>
             </div>
             <div class="actions">
-                <a href="{{ url_for('add_audit') }}" class="btn btn-primary">+ New Audit</a>
+                <a href="{{ url_for('audits') }}" class="btn btn-primary">+ New Audit</a>
             </div>
         </div>
 
@@ -138,7 +138,7 @@
             {% else %}
             <div class="empty-state">
                 <div class="icon">📍</div>
-                <p>No audits recorded yet. <a href="{{ url_for('add_audit') }}" style="color:var(--primary); font-weight:600;">Add your first audit</a></p>
+                <p>No audits recorded yet. <a href="{{ url_for('audits') }}" style="color:var(--primary); font-weight:600;">Add your first audit</a></p>
             </div>
             {% endif %}
         </div>

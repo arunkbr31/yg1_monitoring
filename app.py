@@ -36,6 +36,16 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
+PLANTS = ['Plant 1', 'Plant 2', 'Plant 3']
+
+# Zone names can be replaced here once the final list is confirmed.
+ZONES = [f'Zone {i}' for i in range(1, 21)]
+
+# Zonal leader names can be replaced here once the final list is confirmed.
+ZONAL_LEADERS = [f'Zonal Leader {i}' for i in range(1, 11)]
+
+STATUS_OPTIONS = ['open', 'closed']
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -136,6 +146,56 @@ def send_email(to_email, subject, body_text, body_html=None):
         db.session.commit()
         print(f"[EMAIL FAILED] {error_msg}")
         return False, error_msg
+
+
+def normalize_choice(value, options):
+    import re
+
+    value = (value or '').strip()
+    if value in options:
+        return value
+    match = re.fullmatch(r'([A-Za-z ]*?)(\d+)', value)
+    if match:
+        candidate = f"{match.group(1).strip()} {int(match.group(2))}"
+        if candidate in options:
+            return candidate
+    return value
+
+
+def run_migrations():
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(db.engine)
+    if 'audit' not in inspector.get_table_names():
+        return
+
+    columns = {c['name'] for c in inspector.get_columns('audit')}
+    if 'zone' not in columns:
+        with db.engine.begin() as conn:
+            conn.execute(text("ALTER TABLE audit ADD COLUMN zone VARCHAR(100) DEFAULT ''"))
+        print('[OK] Migration: added audit.zone column')
+
+    legacy_zone_columns = [f'zone{i}' for i in range(1, 21) if f'zone{i}' in columns]
+    if legacy_zone_columns:
+        coalesce_expr = "COALESCE(" + ", ".join("NULLIF(%s, '')" % c for c in legacy_zone_columns) + ")"
+        with db.engine.begin() as conn:
+            conn.execute(text(
+                f"UPDATE audit SET zone = {coalesce_expr} "
+                f"WHERE COALESCE(NULLIF(zone, ''), '') = ''"
+            ))
+        print(f"[OK] Migration: backfilled audit.zone from {legacy_zone_columns}")
+
+    with db.session.begin():
+        for audit in Audit.query.all():
+            zone = normalize_choice(audit.zone, ZONES)
+            if zone != audit.zone and zone in ZONES:
+                audit.zone = zone
+            plant = normalize_choice(audit.plant, PLANTS)
+            if plant != audit.plant and plant in PLANTS:
+                audit.plant = plant
+            leader = normalize_choice(audit.zonal_leader, ZONAL_LEADERS)
+            if leader != audit.zonal_leader and leader in ZONAL_LEADERS:
+                audit.zonal_leader = leader
 
 
 def get_status_counts():
@@ -458,133 +518,118 @@ def audits():
     if hod_query:
         query = query.filter(Audit.responsible_hod.ilike(f'%{hod_query}%'))
     all_audits = query.all()
-    return render_template('audits.html', audits=all_audits)
+    return render_template(
+        'audits.html',
+        audits=all_audits,
+        plants=PLANTS,
+        zones=ZONES,
+        zonal_leaders=ZONAL_LEADERS,
+    )
 
 
-@app.route('/audits/add', methods=['GET', 'POST'])
+@app.route('/audits/save', methods=['POST'])
 @login_required
-def add_audit():
-    if request.method == 'POST':
-        audit_date = parse_date(request.form.get('audit_date', ''))
-        ygct_plant1 = request.form.get('ygct_plant1', '').strip()
-        ygct_plant2 = request.form.get('ygct_plant2', '').strip()
-        ygct_plant3 = request.form.get('ygct_plant3', '').strip()
-        zonal_leader = request.form.get('zonal_leader', '').strip()
-        nc_category = request.form.get('nc_category', '').strip()
-        description = request.form.get('description', '').strip()
-        action_taken_details = request.form.get('action_taken_details', '').strip()
-        responsible_hod = request.form.get('responsible_hod', '').strip()
-        responsible_email = request.form.get('responsible_email', '').strip()
-        target_date = parse_date(request.form.get('target_date', ''))
-        status = request.form.get('status', 'open')
-
-        before_file = request.files.get('before_image')
-        after_file = request.files.get('after_image')
-        before_image = save_upload(before_file)
-        after_image = save_upload(after_file)
-
-        errors = []
-        if not audit_date:
-            errors.append('Audit Date is required.')
-        if not ygct_plant1 and not ygct_plant2 and not ygct_plant3:
-            errors.append('At least one plant (Plant1, Plant2, or Plant3) is required.')
-        if not zonal_leader:
-            errors.append('Zonal Leader is required.')
-        if not nc_category:
-            errors.append('NC Category is required.')
-        if not description:
-            errors.append('Description of Non Conformity is required.')
-        if not responsible_hod:
-            errors.append('Responsible HOD is required.')
-        if not responsible_email:
-            errors.append('Responsible Email is required.')
-
-        if errors:
-            for e in errors:
-                flash(e, 'error')
-            return render_template('audit_form.html', form=request.form)
-
-        audit = Audit(
-            audit_date=audit_date,
-            ygct_plant1=ygct_plant1,
-            ygct_plant2=ygct_plant2,
-            ygct_plant3=ygct_plant3,
-            zonal_leader=zonal_leader,
-            nc_category=nc_category,
-            description=description,
-            before_image=before_image,
-            after_image=after_image,
-            action_taken_details=action_taken_details,
-            responsible_hod=responsible_hod,
-            responsible_email=responsible_email,
-            target_date=target_date,
-            status=status,
-        )
-        db.session.add(audit)
-        db.session.commit()
-
-        create_audit_alert(audit)
-
-        flash('Audit record created successfully! Alert sent to responsible person.', 'success')
-        return redirect(url_for('audits'))
-
-    return render_template('audit_form.html')
-
-
-@app.route('/audits/edit/<int:audit_id>', methods=['GET', 'POST'])
-@login_required
-def edit_audit(audit_id):
-    audit = db.session.get(Audit, audit_id)
-    if not audit:
+def save_audit():
+    audit_id = request.form.get('audit_id', type=int)
+    audit = db.session.get(Audit, audit_id) if audit_id else None
+    if audit_id and not audit:
         flash('Audit record not found.', 'error')
         return redirect(url_for('audits'))
 
-    if request.method == 'POST':
-        audit.audit_date = parse_date(request.form.get('audit_date', '')) or audit.audit_date
-        audit.ygct_plant1 = request.form.get('ygct_plant1', '').strip()
-        audit.ygct_plant2 = request.form.get('ygct_plant2', '').strip()
-        audit.ygct_plant3 = request.form.get('ygct_plant3', '').strip()
-        audit.zonal_leader = request.form.get('zonal_leader', '').strip()
-        audit.nc_category = request.form.get('nc_category', '').strip()
-        audit.description = request.form.get('description', '').strip()
-        audit.action_taken_details = request.form.get('action_taken_details', '').strip()
-        audit.responsible_hod = request.form.get('responsible_hod', '').strip()
-        audit.responsible_email = request.form.get('responsible_email', '').strip()
-        audit.target_date = parse_date(request.form.get('target_date', ''))
-        audit.status = request.form.get('status', 'open')
-        audit.updated_at = datetime.utcnow()
+    plant = request.form.get('plant', '').strip()
+    zone = request.form.get('zone', '').strip()
+    zonal_leader = request.form.get('zonal_leader', '').strip()
+    nc_category = request.form.get('nc_category', '').strip()
+    description = request.form.get('description', '').strip()
+    action_taken_details = request.form.get('action_taken_details', '').strip()
+    responsible_hod = request.form.get('responsible_hod', '').strip()
+    responsible_email = request.form.get('responsible_email', '').strip()
+    audit_date = parse_date(request.form.get('audit_date', ''))
+    target_date = parse_date(request.form.get('target_date', ''))
+    status = request.form.get('status', 'open')
 
-        before_file = request.files.get('before_image')
-        after_file = request.files.get('after_image')
-        if before_file and before_file.filename:
-            audit.before_image = save_upload(before_file) or audit.before_image
-        if after_file and after_file.filename:
-            audit.after_image = save_upload(after_file) or audit.after_image
+    errors = []
+    if not audit_date:
+        errors.append('Audit Date is required.')
 
-        errors = []
-        if not audit.ygct_plant1 and not audit.ygct_plant2 and not audit.ygct_plant3:
-            errors.append('At least one plant (Plant1, Plant2, or Plant3) is required.')
-        if not audit.zonal_leader:
-            errors.append('Zonal Leader is required.')
-        if not audit.nc_category:
-            errors.append('NC Category is required.')
-        if not audit.description:
-            errors.append('Description of Non Conformity is required.')
-        if not audit.responsible_hod:
-            errors.append('Responsible HOD is required.')
-        if not audit.responsible_email:
-            errors.append('Responsible Email is required.')
+    current_plant = audit.plant if audit else ''
+    current_zone = audit.zone if audit else ''
+    current_leader = audit.zonal_leader if audit else ''
+    dropdowns = (
+        ('Plant', plant, PLANTS, current_plant),
+        ('Zone', zone, ZONES, current_zone),
+        ('Zonal Leader', zonal_leader, ZONAL_LEADERS, current_leader),
+    )
+    for label, value, options, current in dropdowns:
+        if value not in options and value != current:
+            errors.append(f'Please select a {label} from the dropdown.')
 
-        if errors:
-            for e in errors:
-                flash(e, 'error')
-            return render_template('audit_form.html', audit=audit, form=request.form)
+    if not nc_category:
+        errors.append('NC Category is required.')
+    if not description:
+        errors.append('Description of Non Conformity is required.')
+    if not responsible_hod:
+        errors.append('Responsible HOD is required.')
+    if not responsible_email:
+        errors.append('Responsible Email is required.')
+    if status not in STATUS_OPTIONS:
+        errors.append('Please select a valid Status.')
 
-        db.session.commit()
-        flash('Audit record updated successfully!', 'success')
+    if errors:
+        for e in errors:
+            flash(e, 'error')
         return redirect(url_for('audits'))
 
-    return render_template('audit_form.html', audit=audit)
+    before_file = request.files.get('before_image')
+    after_file = request.files.get('after_image')
+
+    if not audit:
+        audit = Audit(audit_date=audit_date, zone=zone, zonal_leader=zonal_leader)
+        db.session.add(audit)
+    else:
+        audit.audit_date = audit_date
+        audit.updated_at = datetime.utcnow()
+
+    audit.plant = plant
+    audit.zone = zone
+    audit.zonal_leader = zonal_leader
+    audit.nc_category = nc_category
+    audit.description = description
+    audit.action_taken_details = action_taken_details
+    audit.responsible_hod = responsible_hod
+    audit.responsible_email = responsible_email
+    audit.target_date = target_date
+    audit.status = status
+    if before_file and before_file.filename:
+        audit.before_image = save_upload(before_file) or audit.before_image
+    if after_file and after_file.filename:
+        uploaded_after = save_upload(after_file)
+        if uploaded_after:
+            audit.after_image = uploaded_after
+            audit.status = 'closed'
+
+    db.session.commit()
+
+    if not audit_id:
+        create_audit_alert(audit)
+        flash('Audit record created successfully!', 'success')
+    else:
+        flash('Audit record updated successfully!', 'success')
+
+    return redirect(url_for('audits'))
+
+
+@app.route('/audits/add')
+@login_required
+def add_audit():
+    return redirect(url_for('audits'))
+
+
+@app.route('/audits/edit/<int:audit_id>')
+@login_required
+def edit_audit(audit_id):
+    return redirect(url_for('audits'))
+
 
 
 @app.route('/audits/close/<int:audit_id>', methods=['POST'])
@@ -699,8 +744,8 @@ def deactivate_user(user_id):
 
 
 def create_audit_alert(audit):
-    subject = f"New Audit Alert: {audit.nc_category} - {audit.ygct_plant1}"
-    plant_info = f"Plant1: {audit.ygct_plant1}\nPlant2: {audit.ygct_plant2}\nPlant3: {audit.ygct_plant3}"
+    subject = f"New Audit Alert: {audit.nc_category} - {audit.plant}"
+    plant_info = f"Plant: {audit.plant}\nZone: {audit.zone}"
     body_text = (
         f"A new audit record has been created.\n\n"
         f"Audit Date: {audit.audit_date}\n"
@@ -715,9 +760,8 @@ def create_audit_alert(audit):
     )
     body_html = (
         f"<h3>New Audit Alert: {audit.nc_category}</h3>"
-        f"<p><strong>Plant1:</strong> {audit.ygct_plant1}</p>"
-        f"<p><strong>Plant2:</strong> {audit.ygct_plant2}</p>"
-        f"<p><strong>Plant3:</strong> {audit.ygct_plant3}</p>"
+        f"<p><strong>Plant:</strong> {audit.plant}</p>"
+        f"<p><strong>Zone:</strong> {audit.zone}</p>"
         f"<p><strong>Audit Date:</strong> {audit.audit_date}</p>"
         f"<p><strong>Zonal Leader:</strong> {audit.zonal_leader}</p>"
         f"<p><strong>NC Category:</strong> {audit.nc_category}</p>"
@@ -835,6 +879,7 @@ def test_email():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        run_migrations()
 
         if not User.query.filter_by(username='admin').first():
             admin = User(username='admin', email='admin@company.com', role='admin')

@@ -143,7 +143,7 @@
             {% else %}
             <div class="empty-state">
                 <div class="icon">📋</div>
-                <p>No audit records found for {{ hod }}.{% if selected_date %} Try selecting a different date or <a href="{{ url_for('hod_detail', hod=hod) }}" style="color:var(--primary); font-weight:600;">show all dates</a>.{% else %} <a href="{{ url_for('add_audit') }}" style="color:var(--primary); font-weight:600;">Create your first audit</a>.{% endif %}</p>
+                <p>No audit records found for {{ hod }}.{% if selected_date %} Try selecting a different date or <a href="{{ url_for('hod_detail', hod=hod) }}" style="color:var(--primary); font-weight:600;">show all dates</a>.{% else %} <a href="{{ url_for('audits') }}" style="color:var(--primary); font-weight:600;">Create your first audit</a>.{% endif %}</p>
             </div>
             {% endif %}
         </div>

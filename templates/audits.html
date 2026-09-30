@@ -38,10 +38,7 @@
         <div class="page-header">
             <div>
                 <h1>Audit Records</h1>
-                <p>Non-conformity tracking with before/after images and corrective actions</p>
-            </div>
-            <div class="actions">
-                <a href="{{ url_for('add_audit') }}" class="btn btn-primary">+ New Audit</a>
+                <p>Select Plant, Zone and Zonal Leader from the dropdowns, type the remaining fields, then press Save</p>
             </div>
         </div>
 
@@ -71,94 +68,157 @@
                         {% endif %}
                     </form>
                 </div>
-            {% if audits %}
             <div class="table-scroll">
                 <table>
                     <thead>
                         <tr>
                             <th>Audit Date</th>
-                            <th>Plants</th>
+                            <th>Plant</th>
+                            <th>Zone</th>
                             <th>Zonal Leader</th>
                             <th>NC Category</th>
                             <th>Description of NC</th>
-                            <th>Before</th>
-                            <th>After</th>
                             <th>Action Taken</th>
                             <th>Responsible HOD</th>
+                            <th>Responsible Email</th>
                             <th>Target Date</th>
                             <th>Status</th>
-                            <th>Actions</th>
+                            <th>Before</th>
+                            <th>After</th>
+                            <th>Save</th>
                         </tr>
                     </thead>
                     <tbody>
+                        <tr class="new-audit-row">
+                            <td data-label="Audit Date"><input type="text" form="audit-new" name="audit_date" class="cell-input date-input" placeholder="DD-MM-YYYY" autocomplete="off"></td>
+                            <td data-label="Plant">
+                                <select form="audit-new" name="plant" class="cell-input">
+                                    <option value="">-- Select --</option>
+                                    {% for p in plants %}
+                                    <option value="{{ p }}">{{ p }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td data-label="Zone">
+                                <select form="audit-new" name="zone" class="cell-input">
+                                    <option value="">-- Select --</option>
+                                    {% for z in zones %}
+                                    <option value="{{ z }}">{{ z }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td data-label="Zonal Leader">
+                                <select form="audit-new" name="zonal_leader" class="cell-input">
+                                    <option value="">-- Select --</option>
+                                    {% for zl in zonal_leaders %}
+                                    <option value="{{ zl }}">{{ zl }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td data-label="NC Category"><input type="text" form="audit-new" name="nc_category" class="cell-input" placeholder="e.g., 5S"></td>
+                            <td data-label="Description"><input type="text" form="audit-new" name="description" class="cell-input" placeholder="Describe the NC"></td>
+                            <td data-label="Action Taken"><input type="text" form="audit-new" name="action_taken_details" class="cell-input" placeholder="Action taken"></td>
+                            <td data-label="Responsible HOD"><input type="text" form="audit-new" name="responsible_hod" class="cell-input" placeholder="HOD name"></td>
+                            <td data-label="Responsible Email"><input type="email" form="audit-new" name="responsible_email" class="cell-input" placeholder="email@company.com"></td>
+                            <td data-label="Target Date"><input type="text" form="audit-new" name="target_date" class="cell-input date-input" placeholder="DD-MM-YYYY" autocomplete="off"></td>
+                            <td data-label="Status">
+                                <select form="audit-new" name="status" class="cell-input">
+                                    <option value="open">Open</option>
+                                    <option value="closed">Closed</option>
+                                </select>
+                            </td>
+                            <td data-label="Before"><input type="file" form="audit-new" name="before_image" class="cell-file" accept="image/*"></td>
+                            <td data-label="After"><input type="file" form="audit-new" name="after_image" class="cell-file" accept="image/*"></td>
+                            <td data-label="Save"><button type="submit" form="audit-new" class="btn btn-primary btn-sm">Save</button></td>
+                        </tr>
                         {% for a in audits %}
                         <tr>
-                            <td data-label="Audit Date">{{ a.audit_date.strftime('%d %b %Y') }}</td>
-                            <td data-label="Plants">
-                                {% if a.ygct_plant1 %}<span class="badge badge-plant1">{{ a.ygct_plant1 }}</span> {% endif %}
-                                {% if a.ygct_plant2 %}<span class="badge badge-plant2">{{ a.ygct_plant2 }}</span> {% endif %}
-                                {% if a.ygct_plant3 %}<span class="badge badge-plant3">{{ a.ygct_plant3 }}</span> {% endif %}
+                            <td data-label="Audit Date"><input type="text" form="audit-{{ a.id }}" name="audit_date" class="cell-input date-input" value="{{ a.audit_date.strftime('%d-%m-%Y') }}" autocomplete="off"></td>
+                            <td data-label="Plant">
+                                <select form="audit-{{ a.id }}" name="plant" class="cell-input">
+                                    <option value="">-- Select --</option>
+                                    {% if a.plant and a.plant not in plants %}
+                                    <option value="{{ a.plant }}" selected>{{ a.plant }}</option>
+                                    {% endif %}
+                                    {% for p in plants %}
+                                    <option value="{{ p }}" {% if a.plant == p %}selected{% endif %}>{{ p }}</option>
+                                    {% endfor %}
+                                </select>
                             </td>
-                            <td data-label="Zonal Leader">{{ a.zonal_leader }}</td>
-                            <td data-label="NC Category">{{ a.nc_category }}</td>
-                            <td data-label="Description">{{ a.description[:60] }}{% if a.description|length > 60 %}...{% endif %}</td>
+                            <td data-label="Zone">
+                                <select form="audit-{{ a.id }}" name="zone" class="cell-input">
+                                    <option value="">-- Select --</option>
+                                    {% if a.zone and a.zone not in zones %}
+                                    <option value="{{ a.zone }}" selected>{{ a.zone }}</option>
+                                    {% endif %}
+                                    {% for z in zones %}
+                                    <option value="{{ z }}" {% if a.zone == z %}selected{% endif %}>{{ z }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td data-label="Zonal Leader">
+                                <select form="audit-{{ a.id }}" name="zonal_leader" class="cell-input">
+                                    <option value="">-- Select --</option>
+                                    {% if a.zonal_leader and a.zonal_leader not in zonal_leaders %}
+                                    <option value="{{ a.zonal_leader }}" selected>{{ a.zonal_leader }}</option>
+                                    {% endif %}
+                                    {% for zl in zonal_leaders %}
+                                    <option value="{{ zl }}" {% if a.zonal_leader == zl %}selected{% endif %}>{{ zl }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td data-label="NC Category"><input type="text" form="audit-{{ a.id }}" name="nc_category" class="cell-input" value="{{ a.nc_category }}"></td>
+                            <td data-label="Description"><input type="text" form="audit-{{ a.id }}" name="description" class="cell-input" value="{{ a.description }}"></td>
+                            <td data-label="Action Taken"><input type="text" form="audit-{{ a.id }}" name="action_taken_details" class="cell-input" value="{{ a.action_taken_details or '' }}"></td>
+                            <td data-label="Responsible HOD"><input type="text" form="audit-{{ a.id }}" name="responsible_hod" class="cell-input" value="{{ a.responsible_hod }}"></td>
+                            <td data-label="Responsible Email"><input type="email" form="audit-{{ a.id }}" name="responsible_email" class="cell-input" value="{{ a.responsible_email }}"></td>
+                            <td data-label="Target Date"><input type="text" form="audit-{{ a.id }}" name="target_date" class="cell-input date-input" value="{{ a.target_date.strftime('%d-%m-%Y') if a.target_date else '' }}" autocomplete="off"></td>
+                            <td data-label="Status">
+                                <select form="audit-{{ a.id }}" name="status" class="cell-input">
+                                    <option value="open" {% if a.status == 'open' %}selected{% endif %}>Open</option>
+                                    <option value="closed" {% if a.status == 'closed' %}selected{% endif %}>Closed</option>
+                                </select>
+                            </td>
                             <td data-label="Before">
                                 {% if a.before_image %}
                                 <a href="{{ url_for('static', filename='uploads/' + a.before_image) }}" target="_blank">
                                     <img src="{{ url_for('static', filename='uploads/' + a.before_image) }}" alt="Before" style="max-height:60px; border-radius:6px; border:1px solid var(--gray-border); cursor:pointer;">
                                 </a>
-                                {% else %}
-                                <span style="color:var(--text-light);">-</span>
                                 {% endif %}
+                                <input type="file" form="audit-{{ a.id }}" name="before_image" class="cell-file" accept="image/*">
                             </td>
                             <td data-label="After">
                                 {% if a.after_image %}
                                 <a href="{{ url_for('static', filename='uploads/' + a.after_image) }}" target="_blank">
                                     <img src="{{ url_for('static', filename='uploads/' + a.after_image) }}" alt="After" style="max-height:60px; border-radius:6px; border:1px solid var(--gray-border); cursor:pointer;">
                                 </a>
-                                {% else %}
-                                <span style="color:var(--text-light);">-</span>
                                 {% endif %}
+                                <input type="file" form="audit-{{ a.id }}" name="after_image" class="cell-file" accept="image/*">
                             </td>
-                            <td data-label="Action Taken">{{ a.action_taken_details[:60] if a.action_taken_details else '-' }}{% if a.action_taken_details and a.action_taken_details|length > 60 %}...{% endif %}</td>
-                            <td data-label="Responsible HOD">{{ a.responsible_hod }}</td>
-                            <td data-label="Target Date">{{ a.target_date.strftime('%d %b %Y') if a.target_date else '-' }}</td>
-                            <td data-label="Status">
-                                {% if a.status == 'open' %}
-                                <span class="badge badge-open">Open</span>
-                                {% else %}
-                                <span class="badge badge-closed">Closed</span>
-                                {% endif %}
-                            </td>
-                            <td data-label="Actions">
-                                <div style="display:flex; gap:6px;">
-                                    <a href="{{ url_for('edit_audit', audit_id=a.id) }}" class="btn btn-outline btn-sm">Edit</a>
-                                    {% if a.status == 'open' %}
-                                    <form method="POST" action="{{ url_for('close_audit', audit_id=a.id) }}">
-                                        <button type="submit" class="btn btn-success btn-sm">Close</button>
-                                    </form>
-                                    {% else %}
-                                    <form method="POST" action="{{ url_for('reopen_audit', audit_id=a.id) }}">
-                                        <button type="submit" class="btn btn-outline btn-sm">Reopen</button>
-                                    </form>
-                                    {% endif %}
-                                    <form method="POST" action="{{ url_for('delete_audit', audit_id=a.id) }}">
-                                        <button type="submit" class="link-btn danger" data-confirm="Delete this audit record?">Delete</button>
-                                    </form>
-                                </div>
-                            </td>
+                            <td data-label="Save"><button type="submit" form="audit-{{ a.id }}" class="btn btn-primary btn-sm">Save</button></td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-            {% else %}
-            <div class="empty-state">
-                <div class="icon">📍</div>
-                <p>No audit records yet. <a href="{{ url_for('add_audit') }}" style="color:var(--primary); font-weight:600;">Create your first audit</a></p>
-            </div>
-            {% endif %}
+            <form id="audit-new" method="POST" action="{{ url_for('save_audit') }}" enctype="multipart/form-data"></form>
+            {% for a in audits %}
+            <form id="audit-{{ a.id }}" method="POST" action="{{ url_for('save_audit') }}" enctype="multipart/form-data">
+                <input type="hidden" name="audit_id" value="{{ a.id }}">
+            </form>
+            {% endfor %}
         </div>
     </main>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    flatpickr('.date-input', {
+        dateFormat: 'd-m-Y',
+        allowInput: true
+    });
+});
+</script>
 {% endblock %}

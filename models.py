@@ -43,6 +43,7 @@ class Audit(db.Model):
     ygct_plant1 = db.Column(db.String(100), nullable=False)
     ygct_plant2 = db.Column(db.String(100), nullable=False, default='')
     ygct_plant3 = db.Column(db.String(100), nullable=False, default='')
+    zone = db.Column(db.String(100), nullable=False, default='')
     zonal_leader = db.Column(db.String(100), nullable=False)
     nc_category = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=False)
@@ -57,6 +58,19 @@ class Audit(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     alerts = db.relationship('Alert', backref='audit', lazy=True, cascade='all, delete-orphan')
+
+    @property
+    def plant(self):
+        return self.ygct_plant1 or self.ygct_plant2 or self.ygct_plant3 or ''
+
+    @plant.setter
+    def plant(self, value):
+        value = (value or '').strip()
+        index = {'Plant 1': 'ygct_plant1', 'Plant 2': 'ygct_plant2', 'Plant 3': 'ygct_plant3'}.get(value)
+        if not index:
+            return
+        for column in ('ygct_plant1', 'ygct_plant2', 'ygct_plant3'):
+            setattr(self, column, value if column == index else '')
 
     def __repr__(self):
         return f'<Audit {self.id} - {self.nc_category}>'
