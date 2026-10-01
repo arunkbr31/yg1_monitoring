@@ -73,59 +73,331 @@
             background-size: 40px 40px;
             pointer-events: none;
         }
-        .auth-card {
-            background: rgba(255,255,255,.88);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,.25);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,.12);
+        /* ── Split-screen auth pages (login / register) ── */
+        .auth-split-body {
+            display: block !important;
+            padding: 0 !important;
+            background: #0b0e13;
+            height: 100vh;
+            height: 100dvh;
+            max-height: 100vh;
+            max-height: 100dvh;
+            overflow: hidden;
+        }
+        .auth-split-body::before, .auth-split-body::after { display: none; }
+
+        .auth-split {
+            display: grid;
+            grid-template-columns: 1.05fr .95fr;
+            height: 100%;
+            min-height: 0;
             width: 100%;
-            max-width: 440px;
-            max-height: calc(100vh - 40px);
-            overflow-y: auto;
-            padding: 40px 36px;
+        }
+
+        /* Left: industrial brand panel */
+        .auth-brand {
             position: relative;
+            overflow: hidden;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: clamp(6px, 1.6vh, 4vh);
+            padding: clamp(14px, 2.8vh, 48px) clamp(20px, 3vw, 56px);
+            background:
+                radial-gradient(circle at 78% 18%, rgba(245,197,32,.20) 0%, transparent 46%),
+                radial-gradient(circle at 12% 88%, rgba(245,197,32,.10) 0%, transparent 50%),
+                linear-gradient(140deg, #0b0e13 0%, #131820 45%, #1a2029 100%);
+        }
+        .auth-brand::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+            background-size: 56px 56px;
+            pointer-events: none;
+        }
+        .auth-brand::after {
+            content: '';
+            position: absolute;
+            inset: -20% -40%;
+            background: linear-gradient(105deg, transparent 42%, rgba(245,197,32,.10) 50%, transparent 58%);
+            transform: rotate(8deg);
+            pointer-events: none;
+        }
+        .auth-brand > * { position: relative; z-index: 2; }
+
+        .brand-top { display: flex; align-items: center; gap: 16px; flex: 0 0 auto; }
+        .brand-mark {
+            width: clamp(36px, 5.4vh, 62px); height: clamp(36px, 5.4vh, 62px);
+            flex: 0 0 auto;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(145deg, #f5c520, #d99b06);
+            border-radius: clamp(10px, 1.4vh, 14px);
+            box-shadow: 0 10px 28px rgba(245,197,32,.30);
+            padding: clamp(7px, 1.1vh, 12px);
+        }
+        .brand-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .brand-top .brand-name {
+            font-size: clamp(13px, 1.8vh, 19px); font-weight: 800; color: #fff; letter-spacing: 2.5px;
+        }
+        .brand-top .brand-sub {
+            font-size: clamp(8px, 1.05vh, 11px); font-weight: 600; color: #f5c520;
+            letter-spacing: 2px; text-transform: uppercase; margin-top: 3px;
+        }
+
+        .brand-copy { min-height: 0; }
+        .brand-copy h1 {
+            font-size: clamp(22px, 4.6vh, 56px);
+            line-height: 1.05;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -1px;
+            margin-bottom: 4px;
+        }
+        .brand-copy h1 span {
+            display: block;
+            background: linear-gradient(95deg, #ffd75e, #f5c520 55%, #e0a800);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .brand-copy .brand-rule {
+            width: clamp(48px, 7vh, 72px); height: 4px; border-radius: 3px;
+            background: linear-gradient(90deg, #f5c520, transparent);
+            margin: clamp(6px, 1.7vh, 22px) 0;
+        }
+        .brand-copy p.tagline {
+            font-size: clamp(11.5px, 1.75vh, 17px); line-height: 1.55; color: #cbd5e1;
+            max-width: 460px; font-weight: 400;
+        }
+        .brand-chips {
+            display: flex; flex-wrap: wrap; gap: 8px;
+            margin-top: clamp(8px, 2.2vh, 32px);
+        }
+        .brand-chip {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: clamp(4px, 0.8vh, 9px) 14px;
+            border: 1px solid rgba(245,197,32,.28);
+            background: rgba(245,197,32,.07);
+            border-radius: 999px;
+            font-size: clamp(9px, 1.15vh, 12px); font-weight: 600; color: #e8edf3;
+            letter-spacing: .4px;
+        }
+        .brand-chip i { color: #f5c520; font-style: normal; }
+
+        .brand-foot {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 16px; flex-wrap: wrap;
+            font-size: clamp(8.5px, 1.1vh, 12px); color: #7b8794;
+            border-top: 1px solid rgba(255,255,255,.08);
+            padding-top: clamp(6px, 1.6vh, 22px);
+            flex: 0 0 auto;
+        }
+        .brand-foot .lock { display: inline-flex; align-items: center; gap: 8px; }
+
+        /* decorative cutting-tool / gear artwork */
+        .brand-art {
+            position: absolute;
+            right: -140px; bottom: -120px;
+            width: 520px; height: 520px;
+            opacity: .13;
+            color: #f5c520;
             z-index: 1;
+            pointer-events: none;
         }
-        .auth-card::-webkit-scrollbar { width: 6px; }
-        .auth-card::-webkit-scrollbar-track { background: transparent; }
-        .auth-card::-webkit-scrollbar-thumb {
-            background: rgba(0,0,0,.15);
-            border-radius: 10px;
-        }
-        .auth-card::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.25); }
-        .auth-logo {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-        .auth-logo .logo-badge {
-            width: 72px;
-            height: 72px;
-            background: linear-gradient(135deg, #2563eb, #3b82f6);
-            color: white;
-            border-radius: 18px;
-            display: inline-flex;
+
+        /* Right: form panel */
+        .auth-form-side {
+            background: #f4f6f8;
+            min-height: 0;
+            display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 28px;
-            font-weight: 800;
-            margin-bottom: 14px;
-            box-shadow: 0 6px 20px rgba(37,99,235,.35);
-            overflow: hidden;
-            padding: 0;
-            border: none;
+            padding: clamp(8px, 1.6vh, 36px) clamp(12px, 2vw, 32px);
         }
-        .auth-logo .logo-badge img {
+        .auth-panel {
             width: 100%;
-            height: 100%;
-            object-fit: contain;
-            border-radius: 18px;
-            display: block;
-            padding: 12px;
+            max-width: 430px;
+            background: #fff;
+            border: 1px solid #e6eaef;
+            border-radius: clamp(14px, 2vw, 20px);
+            box-shadow: 0 24px 60px rgba(15,23,42,.10), 0 2px 6px rgba(15,23,42,.05);
+            padding: clamp(14px, 2.6vh, 40px) clamp(16px, 2.4vw, 38px) clamp(12px, 2.2vh, 32px);
         }
-        .auth-logo h1 { font-size: 24px; font-weight: 800; color: var(--dark); margin-bottom: 4px; }
-        .auth-logo p { font-size: 13px; color: var(--text-light); margin-top: 4px; }
+        .auth-panel.wide { max-width: 620px; }
+        .auth-panel-head { text-align: center; margin-bottom: clamp(8px, 1.9vh, 28px); }
+        .panel-icon {
+            width: clamp(34px, 5.2vh, 64px); height: clamp(34px, 5.2vh, 64px);
+            margin: 0 auto clamp(6px, 1.3vh, 18px);
+            display: flex; align-items: center; justify-content: center;
+            border-radius: clamp(12px, 1.6vw, 18px);
+            color: #f5c520;
+            background: linear-gradient(145deg, #1a2029, #0b0e13);
+            box-shadow: 0 10px 24px rgba(15,23,42,.22);
+        }
+        .panel-icon svg { width: 58%; height: 58%; }
+        .auth-panel-head h2 {
+            font-size: clamp(14px, 1.9vh, 21px); font-weight: 800; color: #0f172a; letter-spacing: 1.5px;
+        }
+        .auth-panel-head .panel-tag {
+            display: inline-block;
+            margin-top: clamp(3px, 0.7vh, 8px);
+            font-size: clamp(8.5px, 1.05vh, 11px); font-weight: 700; letter-spacing: 2.2px;
+            text-transform: uppercase;
+            color: #b58a06;
+            background: #fef6dd;
+            border: 1px solid #f7e7ab;
+            padding: clamp(2px, 0.5vh, 5px) 12px;
+            border-radius: 999px;
+        }
+        .auth-panel-head .panel-hint {
+            font-size: clamp(9.5px, 1.25vh, 13px); color: #64748b;
+            margin-top: clamp(3px, 0.8vh, 12px);
+        }
+
+        .field { margin-bottom: clamp(7px, 1.5vh, 18px); }
+        .field > label {
+            display: block;
+            font-size: clamp(9px, 1.15vh, 12px); font-weight: 700; color: #334155;
+            letter-spacing: .6px; text-transform: uppercase;
+            margin-bottom: clamp(3px, 0.7vh, 7px);
+        }
+        .input-wrap { position: relative; display: flex; align-items: center; }
+        .input-wrap .lead-icon {
+            position: absolute; left: clamp(11px, 1.1vw, 15px);
+            color: #94a3b8; pointer-events: none;
+            display: flex; align-items: center;
+        }
+        .input-wrap input,
+        .input-wrap select {
+            width: 100%;
+            padding: clamp(8px, 1.5vh, 14px) clamp(38px, 3.2vw, 46px);
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fbfcfd;
+            font-size: clamp(12.5px, 1.5vh, 14.5px);
+            font-family: inherit;
+            color: #0f172a;
+            appearance: none;
+            -webkit-appearance: none;
+            transition: border-color .2s, box-shadow .2s, background .2s;
+        }
+        .input-wrap select { padding-right: clamp(34px, 3vw, 42px); cursor: pointer; }
+        .input-wrap .caret {
+            position: absolute; right: 12px;
+            color: #94a3b8; pointer-events: none;
+            display: flex; align-items: center;
+        }
+        .input-wrap input::placeholder { color: #a8b3c0; }
+        .input-wrap input:focus,
+        .input-wrap select:focus {
+            outline: none;
+            background: #fff;
+            border-color: #f5c520;
+            box-shadow: 0 0 0 4px rgba(245,197,32,.18);
+        }
+        .toggle-pw {
+            position: absolute; right: 6px;
+            width: clamp(28px, 3.6vh, 34px); height: clamp(28px, 3.6vh, 34px);
+            display: flex; align-items: center; justify-content: center;
+            border: none; background: transparent;
+            color: #94a3b8; border-radius: 9px;
+            transition: color .2s, background .2s;
+        }
+        .toggle-pw:hover { color: #334155; background: #f1f5f9; }
+
+        /* two-up field rows keep the taller register form inside one frame */
+        .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(8px, 1vw, 14px); }
+
+        .panel-row {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 12px; margin: 0 0 clamp(9px, 1.9vh, 24px);
+            font-size: clamp(10.5px, 1.3vh, 13px);
+        }
+        .panel-remember label {
+            display: flex; align-items: center; gap: 8px;
+            color: #475569; cursor: pointer; user-select: none;
+        }
+        .panel-remember input[type="checkbox"] {
+            width: clamp(14px, 1.8vh, 17px); height: clamp(14px, 1.8vh, 17px);
+            accent-color: #f5c520; cursor: pointer;
+        }
+        .forgot-link {
+            color: #b58a06; font-weight: 600; background: none; border: none;
+            padding: 0; font-family: inherit; font-size: clamp(10.5px, 1.3vh, 13px);
+        }
+        .forgot-link:hover { color: #8f6c05; text-decoration: underline; }
+
+        .signin-btn {
+            width: 100%;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            padding: clamp(9px, 1.6vh, 16px) 20px;
+            border: none; border-radius: 12px;
+            background: linear-gradient(135deg, #f7cf3f, #f0b400);
+            color: #14181f;
+            font-size: clamp(12.5px, 1.6vh, 15px); font-weight: 800; letter-spacing: .6px;
+            box-shadow: 0 10px 24px rgba(240,180,0,.38);
+            transition: transform .12s, box-shadow .2s, filter .2s;
+        }
+        .signin-btn:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(240,180,0,.48); filter: brightness(1.04); }
+        .signin-btn:active { transform: translateY(0); }
+        .signin-btn .arrow { transition: transform .2s; }
+        .signin-btn:hover .arrow { transform: translateX(4px); }
+
+        .panel-note {
+            text-align: center;
+            font-size: clamp(9px, 1.1vh, 11.5px); color: #94a3b8;
+            margin-top: clamp(8px, 1.7vh, 22px); line-height: 1.6;
+        }
+        .panel-note a { color: #b58a06; font-weight: 600; }
+        .panel-note a:hover { text-decoration: underline; }
+        .forgot-hint {
+            display: none;
+            font-size: clamp(10px, 1.2vh, 12px); color: #8a6d05; background: #fef6dd;
+            border: 1px solid #f7e7ab; border-radius: 10px;
+            padding: clamp(6px, 1vh, 10px) 12px;
+            margin-bottom: clamp(7px, 1.5vh, 18px); text-align: center;
+        }
+        .forgot-hint.show { display: block; }
+
+        /* Auth split-screen responsive */
+        @media (max-width: 1024px) {
+            .auth-split { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+            .auth-brand {
+                padding: clamp(10px, 2vh, 28px) clamp(16px, 4vw, 32px);
+                flex-direction: row; align-items: center; gap: clamp(16px, 2.4vw, 28px);
+                min-height: 0;
+            }
+            .brand-art { display: none; }
+            .brand-copy { flex: 1 1 auto; }
+            .brand-copy h1 { font-size: clamp(18px, 4.4vw, 30px); margin-bottom: 2px; }
+            .brand-copy .brand-rule { width: 44px; margin: 5px 0; }
+            .brand-copy p.tagline { font-size: clamp(10px, 1.6vw, 13px); line-height: 1.45; }
+            .brand-chips { display: none; }
+            .brand-foot { border-top: none; padding-top: 0; }
+            .brand-foot .hide-sm { display: none; }
+            .auth-form-side { padding: clamp(8px, 1.6vh, 32px) 16px clamp(10px, 2vh, 40px); }
+        }
+        @media (max-width: 600px) {
+            .auth-brand { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px 16px; }
+            .brand-mark { width: 42px; height: 42px; border-radius: 12px; padding: 8px; }
+            .brand-top .brand-name { font-size: 15px; letter-spacing: 2px; }
+            .auth-panel { border-radius: 16px; }
+            .input-wrap input, .input-wrap select { padding-right: 40px; }
+            .field-row { grid-template-columns: 1fr; gap: 0; }
+        }
+        /* Extremely short viewports (landscape phones): tighten rhythm only.
+           Nothing is hidden — every element stays visible inside the frame. */
+        @media (max-height: 520px) {
+            .brand-copy, .brand-chips, .brand-foot, .panel-note, .panel-hint { display: none; }
+        }
+        /* Last-resort valve: the page itself never scrolls, only the form column. */
+        @media (max-height: 420px) {
+            .auth-form-side { align-items: flex-start; overflow-y: auto; }
+        }
         /* ── Form groups (shared) ── */
         .form-group { margin-bottom: 16px; }
         .form-group label {
@@ -149,34 +421,6 @@
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(37,99,235,.15);
-        }
-        .auth-form-group { margin-bottom: 20px; }
-        .auth-form-group label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--dark);
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-        }
-        .auth-form-group input, .auth-form-group select {
-            width: 100%;
-            padding: 12px 14px;
-            border: 1.5px solid var(--gray-border);
-            border-radius: 12px;
-            font-size: 14px;
-            font-family: inherit;
-            transition: border .2s, box-shadow .2s, background .2s;
-            background: rgba(255,255,255,.6);
-        }
-        .auth-form-group input:focus, .auth-form-group select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37,99,235,.15);
-            background: white;
         }
         .btn {
             display: inline-block;
@@ -206,19 +450,6 @@
         .btn-outline { background: white; color: var(--text); border: 1.5px solid var(--gray-border); }
         .btn-outline:hover { background: var(--gray); }
         .btn-sm { padding: 6px 12px; font-size: 12px; }
-        .btn-block { width: 100%; }
-
-        .remember-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            font-size: 13px;
-        }
-        .remember-row label { display: flex; align-items: center; gap: 6px; color: var(--text); cursor: pointer; }
-        .remember-row input { accent-color: var(--primary); }
-        .remember-row a { color: var(--primary); font-weight: 600; }
-        .remember-row a:hover { text-decoration: underline; }
 
         /* Flash messages */
         .flash-container {
@@ -451,16 +682,14 @@
             padding: 12px 14px;
             font-size: 14px;
         }
-        /* Column widths - scoped to HOD Summary only (5-column layout) */
+        /* Column widths - scoped to HOD Summary only (4-column layout) */
         .hod-summary-page .table-scroll tbody td:nth-child(1) { width: 40%; }
         .hod-summary-page .table-scroll tbody td:nth-child(2),
         .hod-summary-page .table-scroll tbody td:nth-child(3),
-        .hod-summary-page .table-scroll tbody td:nth-child(4),
-        .hod-summary-page .table-scroll tbody td:nth-child(5) { width: 15%; text-align: center; }
+        .hod-summary-page .table-scroll tbody td:nth-child(4) { width: 20%; text-align: center; }
         .hod-summary-page .table-scroll thead th:nth-child(2),
         .hod-summary-page .table-scroll thead th:nth-child(3),
-        .hod-summary-page .table-scroll thead th:nth-child(4),
-        .hod-summary-page .table-scroll thead th:nth-child(5) { text-align: center; }
+        .hod-summary-page .table-scroll thead th:nth-child(4) { text-align: center; }
         .table-scroll .badge { font-size: 12px; font-weight: 700; }
         .table-scroll tbody tr:hover { background: #f0f7ff; }
         .table-scroll tbody tr:hover .link-btn { background: var(--primary-light); }
@@ -601,8 +830,7 @@
             .hod-summary-page .table-scroll tbody td:nth-child(1),
             .hod-summary-page .table-scroll tbody td:nth-child(2),
             .hod-summary-page .table-scroll tbody td:nth-child(3),
-            .hod-summary-page .table-scroll tbody td:nth-child(4),
-            .hod-summary-page .table-scroll tbody td:nth-child(5) { width: 100%; }
+            .hod-summary-page .table-scroll tbody td:nth-child(4) { width: 100%; }
             tbody tr { margin-bottom: 16px; padding: 16px; background: white; border-radius: var(--radius); box-shadow: var(--shadow); }
             tbody td { padding: 8px 0; border-bottom: 1px solid var(--gray-border); display: flex; justify-content: space-between; align-items: center; }
             tbody td:last-child { border-bottom: none; }
@@ -612,11 +840,8 @@
             .page-header { flex-direction: column; align-items: flex-start; gap: 16px; }
             .page-header .actions { width: 100%; justify-content: flex-end; }
             .flash-container { top: 10px; right: 10px; left: 10px; max-width: none; width: auto; }
-            .form-group input, .form-group select, .form-group textarea,
-            .auth-form-group input, .auth-form-group select, .auth-form-group textarea { font-size: 16px; }
-            .btn-block { width: 100%; }
+            .form-group input, .form-group select, .form-group textarea { font-size: 16px; }
             .modal-box { margin: 10px; }
-            .auth-card { padding: 24px 20px; }
         }
 
         @media (max-width: 480px) {
@@ -626,12 +851,10 @@
             .card, .chart-box { padding: 16px; }
             .page-header h1 { font-size: 20px; }
             .sidebar { width: 100%; max-width: 280px; }
-            .auth-card { margin: 10px; }
             .btn { padding: 12px 16px; }
             .btn-sm { padding: 8px 12px; font-size: 13px; }
             .rule-card { padding: 16px; }
-            .form-group input, .form-group select, .form-group textarea,
-            .auth-form-group input, .auth-form-group select, .auth-form-group textarea { padding: 14px 16px; }
+            .form-group input, .form-group select, .form-group textarea { padding: 14px 16px; }
             .flash { padding: 12px 14px; }
         }
 
@@ -665,42 +888,6 @@
             .mobile-menu-btn { display: flex; }
         }
         .auth-body .mobile-menu-btn { display: none !important; }
-
-        /* Timeout Warning Notification */
-        .timeout-notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 100001;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0,0,0,.2);
-            padding: 20px 24px;
-            max-width: 380px;
-            width: calc(100% - 40px);
-            display: none;
-            align-items: flex-start;
-            gap: 14px;
-            border-left: 4px solid var(--warning);
-            animation: slideInRight .4s cubic-bezier(.175,.885,.32,1.275);
-        }
-        .timeout-notification.active { display: flex; }
-        .timeout-notification .timeout-icon { font-size: 28px; flex-shrink: 0; }
-        .timeout-notification .timeout-content { flex: 1; }
-        .timeout-notification .timeout-content h4 { font-size: 15px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
-        .timeout-notification .timeout-content p { font-size: 13px; color: var(--text-light); margin-bottom: 10px; line-height: 1.4; }
-        .timeout-notification .timeout-timer { font-size: 28px; font-weight: 800; color: var(--warning); margin-bottom: 12px; }
-        .timeout-notification .timeout-actions { display: flex; gap: 8px; }
-        .timeout-notification .timeout-actions .btn { padding: 8px 16px; font-size: 13px; }
-        .timeout-notification .timeout-close {
-            background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-light);
-            padding: 0; line-height: 1; transition: color .2s;
-        }
-        .timeout-notification .timeout-close:hover { color: var(--dark); }
-        @keyframes slideInRight {
-            from { opacity: 0; transform: translateX(60px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
 
         /* Loading Overlay */
         .loading-overlay {
@@ -766,19 +953,6 @@
         <div class="loading-spinner"></div>
         <div class="loading-text">Loading...</div>
     </div>
-    <div class="timeout-notification" id="timeoutNotification">
-        <div class="timeout-icon">⏰</div>
-        <div class="timeout-content">
-            <h4>Session Expiring Soon</h4>
-            <p>You will be logged out due to inactivity in <span id="timeoutTimer">60</span> seconds.</p>
-            <div class="timeout-timer" id="timeoutTimerDisplay">60</div>
-            <div class="timeout-actions">
-                <button class="btn btn-outline" id="timeoutCancel">Logout Now</button>
-                <button class="btn btn-primary" id="timeoutStay">Stay Logged In</button>
-            </div>
-        </div>
-        <button class="timeout-close" id="timeoutClose">&times;</button>
-    </div>
     <div class="modal-overlay" id="confirmModal">
         <div class="modal-box">
             <div class="modal-icon">⚠️</div>
@@ -815,81 +989,6 @@
                     showLoading();
                 }
             });
-
-            // Idle timeout: 5 minutes idle, warn at 4 minutes
-            const IDLE_LIMIT = 5 * 60 * 1000;
-            const WARN_AT = 4 * 60 * 1000;
-            let idleTimer = null;
-            let warnTimer = null;
-            let countdownInterval = null;
-            const timeoutNotification = document.getElementById('timeoutNotification');
-            const timeoutTimerEl = document.getElementById('timeoutTimer');
-            const timeoutTimerDisplay = document.getElementById('timeoutTimerDisplay');
-            const timeoutStayBtn = document.getElementById('timeoutStay');
-            const timeoutCancelBtn = document.getElementById('timeoutCancel');
-            const timeoutCloseBtn = document.getElementById('timeoutClose');
-
-            function resetIdleTimer() {
-                clearTimeout(idleTimer);
-                clearTimeout(warnTimer);
-                clearInterval(countdownInterval);
-                hideTimeoutNotification();
-                warnTimer = setTimeout(showTimeoutWarning, WARN_AT);
-                idleTimer = setTimeout(logoutDueToIdle, IDLE_LIMIT);
-            }
-
-            function showTimeoutWarning() {
-                if (!timeoutNotification) return;
-                timeoutNotification.classList.add('active');
-                let remaining = 60;
-                if (timeoutTimerEl) timeoutTimerEl.textContent = remaining;
-                if (timeoutTimerDisplay) timeoutTimerDisplay.textContent = remaining;
-                countdownInterval = setInterval(function() {
-                    remaining -= 1;
-                    if (timeoutTimerEl) timeoutTimerEl.textContent = remaining;
-                    if (timeoutTimerDisplay) timeoutTimerDisplay.textContent = remaining;
-                    if (remaining <= 0) {
-                        clearInterval(countdownInterval);
-                        logoutDueToIdle();
-                    }
-                }, 1000);
-            }
-
-            function hideTimeoutNotification() {
-                if (timeoutNotification) timeoutNotification.classList.remove('active');
-            }
-
-            function logoutDueToIdle() {
-                clearTimeout(idleTimer);
-                clearTimeout(warnTimer);
-                clearInterval(countdownInterval);
-                hideTimeoutNotification();
-                window.location.href = '/logout';
-            }
-
-            ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(function(evt) {
-                document.addEventListener(evt, function() {
-                    if (timeoutNotification && timeoutNotification.classList.contains('active')) return;
-                    resetIdleTimer();
-                });
-            });
-
-            if (timeoutStayBtn) {
-                timeoutStayBtn.addEventListener('click', function() {
-                    resetIdleTimer();
-                });
-            }
-            if (timeoutCancelBtn) {
-                timeoutCancelBtn.addEventListener('click', function() {
-                    logoutDueToIdle();
-                });
-            }
-            if (timeoutCloseBtn) {
-                timeoutCloseBtn.addEventListener('click', function() {
-                    logoutDueToIdle();
-                });
-            }
-            resetIdleTimer();
 
             const flashes = document.querySelectorAll('.flash');
             flashes.forEach(f => {

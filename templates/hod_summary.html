@@ -69,7 +69,6 @@
                             <th>Open Count</th>
                             <th>Close Count</th>
                             <th>Total Count</th>
-                            <th>Latest Date</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -87,7 +86,6 @@
                             <td data-label="Total Count">
                                 <span class="badge badge-admin">{{ row.total or 0 }}</span>
                             </td>
-                            <td data-label="Latest Date">{{ row.latest_date.strftime('%d %b %Y') if row.latest_date else '-' }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

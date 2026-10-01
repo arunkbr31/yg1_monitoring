@@ -2,6 +2,7 @@ import os
 import smtplib
 import resend
 import ssl
+import time
 import uuid
 from datetime import datetime, date, timedelta
 from email.mime.text import MIMEText
@@ -31,6 +32,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(hours=12)
+
+IDLE_TIMEOUT_SECONDS = 30 * 60
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -209,6 +214,23 @@ def get_status_counts():
     }
 
 
+@app.before_request
+def enforce_idle_timeout():
+    if not current_user.is_authenticated:
+        return None
+    if request.endpoint in ('static', 'login'):
+        return None
+    now = time.time()
+    last_seen = session.get('last_seen')
+    if last_seen is not None and now - last_seen > IDLE_TIMEOUT_SECONDS:
+        logout_user()
+        session.clear()
+        flash('Your session expired due to inactivity. Please sign in again.', 'warning')
+        return redirect(url_for('login'))
+    session['last_seen'] = now
+    return None
+
+
 @app.errorhandler(404)
 def not_found(e):
     return render_template('404.html'), 404
@@ -243,6 +265,7 @@ def login():
 
         login_user(user, remember=request.form.get('remember') == 'on')
         session['last_login'] = datetime.utcnow().isoformat()
+        session['last_seen'] = time.time()
         flash(f'Welcome back, {user.username}!', 'success')
 
         next_page = request.args.get('next')
@@ -680,8 +703,7 @@ def hod_summary():
         Audit.responsible_hod,
         db.func.count(Audit.id).label('total'),
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open_count'),
-        db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed_count'),
-        db.func.max(Audit.audit_date).label('latest_date')
+        db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed_count')
     ).group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
     return render_template('hod_summary.html', hod_data=hod_data)
 
