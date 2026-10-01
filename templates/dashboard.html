@@ -148,7 +148,7 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+YG1.onReady(function() {
     fetch('{{ url_for("charts_data") }}')
         .then(res => res.json())
         .then(data => {

@@ -35,9 +35,17 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', -apple-system, sans-serif;
-            background: var(--gray);
             color: var(--text);
             min-height: 100vh;
+            background-color: #eef2f7;
+            background-image:
+                radial-gradient(circle at 10% -12%, rgba(37,99,235,.12) 0%, transparent 46%),
+                radial-gradient(circle at 90% 2%, rgba(245,197,32,.16) 0%, transparent 44%),
+                radial-gradient(circle at 72% 108%, rgba(13,148,136,.10) 0%, transparent 46%),
+                linear-gradient(rgba(15,23,42,.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15,23,42,.035) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+            background-attachment: fixed;
         }
         a { text-decoration: none; color: inherit; }
         button { font-family: inherit; cursor: pointer; }
@@ -80,17 +88,22 @@
             background: #0b0e13;
             height: 100vh;
             height: 100dvh;
-            max-height: 100vh;
-            max-height: 100dvh;
+            min-height: 100vh;
+            min-height: 100dvh;
             overflow: hidden;
         }
         .auth-split-body::before, .auth-split-body::after { display: none; }
 
+        /* Sized against the viewport directly rather than height:100%, which could
+           fail to resolve and collapse the grid to content height, leaving dead
+           space below the panels. */
         .auth-split {
             display: grid;
             grid-template-columns: 1.05fr .95fr;
-            height: 100%;
-            min-height: 0;
+            height: 100vh;
+            height: 100dvh;
+            min-height: 100vh;
+            min-height: 100dvh;
             width: 100%;
         }
 
@@ -104,10 +117,15 @@
             justify-content: space-between;
             gap: clamp(6px, 1.6vh, 4vh);
             padding: clamp(14px, 2.8vh, 48px) clamp(20px, 3vw, 56px);
-            background:
-                radial-gradient(circle at 78% 18%, rgba(245,197,32,.20) 0%, transparent 46%),
-                radial-gradient(circle at 12% 88%, rgba(245,197,32,.10) 0%, transparent 50%),
-                linear-gradient(140deg, #0b0e13 0%, #131820 45%, #1a2029 100%);
+            background-color: #0b0e13;
+            background-image:
+                radial-gradient(circle at 74% 22%, rgba(245,197,32,.20) 0%, transparent 48%),
+                radial-gradient(circle at 10% 90%, rgba(37,99,235,.14) 0%, transparent 52%),
+                linear-gradient(140deg, rgba(11,14,19,.72) 0%, rgba(11,14,19,.86) 45%, rgba(11,14,19,.94) 100%),
+                url("{{ url_for('static', filename='images/auth_machining_bg.jpg') }}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
         .auth-brand::before {
             content: '';
@@ -209,23 +227,52 @@
             pointer-events: none;
         }
 
-        /* Right: form panel */
+        /* Right: form panel.
+           align-items:center clipped tall forms — the register panel exceeds a
+           short viewport and flex centering pushed the overflow off both ends,
+           which overflow:hidden then cut away. Centering via margin:auto on the
+           panel is safe under overflow, and the column scrolls, so the whole
+           form always stays reachable. */
         .auth-form-side {
-            background: #f4f6f8;
             min-height: 0;
             display: flex;
-            align-items: center;
             justify-content: center;
+            overflow-y: auto;
+            overflow-x: hidden;
             padding: clamp(8px, 1.6vh, 36px) clamp(12px, 2vw, 32px);
+            background-color: #eef1f5;
+            background-image:
+                radial-gradient(circle at 78% 12%, rgba(245,197,32,.10) 0%, transparent 46%),
+                radial-gradient(circle at 14% 92%, rgba(37,99,235,.08) 0%, transparent 50%),
+                linear-gradient(rgba(15,23,42,.030) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15,23,42,.030) 1px, transparent 1px),
+                linear-gradient(160deg, #f6f8fa 0%, #e9edf2 100%);
+            background-size: 100% 100%, 100% 100%, 28px 28px, 28px 28px, 100% 100%;
         }
+        .auth-panel { margin: auto; }
         .auth-panel {
             width: 100%;
             max-width: 430px;
-            background: #fff;
-            border: 1px solid #e6eaef;
+            background: rgba(255,255,255,.92);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(214,222,232,.95);
             border-radius: clamp(14px, 2vw, 20px);
-            box-shadow: 0 24px 60px rgba(15,23,42,.10), 0 2px 6px rgba(15,23,42,.05);
+            box-shadow:
+                0 30px 70px rgba(15,23,42,.16),
+                0 4px 12px rgba(15,23,42,.06),
+                inset 0 1px 0 rgba(255,255,255,.9);
             padding: clamp(14px, 2.6vh, 40px) clamp(16px, 2.4vw, 38px) clamp(12px, 2.2vh, 32px);
+            position: relative;
+        }
+        /* machined gold accent along the top edge of the card */
+        .auth-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 3px;
+            border-radius: clamp(14px, 2vw, 20px) clamp(14px, 2vw, 20px) 0 0;
+            background: linear-gradient(90deg, #f5c520, #f0b400 45%, rgba(37,99,235,.85) 100%);
         }
         .auth-panel.wide { max-width: 620px; }
         .auth-panel-head { text-align: center; margin-bottom: clamp(8px, 1.9vh, 28px); }
@@ -382,21 +429,29 @@
             .auth-form-side { padding: clamp(8px, 1.6vh, 32px) 16px clamp(10px, 2vh, 40px); }
         }
         @media (max-width: 600px) {
-            .auth-brand { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px 16px; }
-            .brand-mark { width: 42px; height: 42px; border-radius: 12px; padding: 8px; }
+            .auth-brand {
+                flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px 16px;
+                background-image:
+                    radial-gradient(circle at 82% 26%, rgba(245,197,32,.20) 0%, transparent 52%),
+                    linear-gradient(140deg, rgba(11,14,19,.80) 0%, rgba(11,14,19,.92) 100%),
+                    url("{{ url_for('static', filename='images/auth_machining_bg.jpg') }}");
+                background-position: 78% center;
+            }
+            .brand-mark { width: 42px; height: 42px; border-radius: 12px; padding: 6px; }
             .brand-top .brand-name { font-size: 15px; letter-spacing: 2px; }
             .auth-panel { border-radius: 16px; }
             .input-wrap input, .input-wrap select { padding-right: 40px; }
             .field-row { grid-template-columns: 1fr; gap: 0; }
         }
-        /* Extremely short viewports (landscape phones): tighten rhythm only.
-           Nothing is hidden — every element stays visible inside the frame. */
+        /* Extremely short viewports (landscape phones): tighten the rhythm only.
+           Nothing is hidden — the brand column shrinks and the form column
+           scrolls, so every element stays present and reachable. */
         @media (max-height: 520px) {
-            .brand-copy, .brand-chips, .brand-foot, .panel-note, .panel-hint { display: none; }
-        }
-        /* Last-resort valve: the page itself never scrolls, only the form column. */
-        @media (max-height: 420px) {
-            .auth-form-side { align-items: flex-start; overflow-y: auto; }
+            .brand-copy h1 { font-size: clamp(18px, 4.2vh, 30px); }
+            .brand-copy .brand-rule { margin: 5px 0; }
+            .brand-chips { display: none; }
+            .brand-foot { padding-top: 6px; }
+            .auth-panel { padding-top: clamp(10px, 2vh, 20px); padding-bottom: clamp(8px, 1.6vh, 16px); }
         }
         /* ── Form groups (shared) ── */
         .form-group { margin-bottom: 16px; }
@@ -947,8 +1002,9 @@
     <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">☰</button>
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
     {% endblock %}
+    <div id="app">
     {% block content %}{% endblock %}
-    {% block scripts %}{% endblock %}
+    </div>
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">Loading...</div>
@@ -990,14 +1046,6 @@
                 }
             });
 
-            const flashes = document.querySelectorAll('.flash');
-            flashes.forEach(f => {
-                const closeBtn = f.querySelector('.flash-close');
-                if (closeBtn) {
-                    closeBtn.addEventListener('click', () => removeFlash(f));
-                }
-                setTimeout(() => removeFlash(f), 4000);
-            });
             function removeFlash(el) {
                 if (el.classList.contains('removing')) return;
                 el.classList.add('removing');
@@ -1010,14 +1058,60 @@
             const btnOk = document.getElementById('confirmModalOk');
             const btnCancel = document.getElementById('confirmModalCancel');
 
-            document.querySelectorAll('[data-confirm]').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    pendingForm = this.closest('form');
-                    modalText.textContent = this.getAttribute('data-confirm') || 'Are you sure?';
-                    modal.classList.add('active');
+            function bindConfirm(root) {
+                root.querySelectorAll('[data-confirm]').forEach(btn => {
+                    if (btn.dataset.confirmBound) return;
+                    btn.dataset.confirmBound = '1';
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        pendingForm = this.closest('form');
+                        modalText.textContent = this.getAttribute('data-confirm') || 'Are you sure?';
+                        modal.classList.add('active');
+                    });
                 });
-            });
+            }
+
+            function bindSidebarNav(root) {
+                const side = root.querySelector('.sidebar');
+                if (!side || side.dataset.navBound) return;
+                side.dataset.navBound = '1';
+                side.querySelectorAll('nav a').forEach(link => {
+                    link.addEventListener('click', function() {
+                        if (window.innerWidth <= 768) {
+                            side.classList.remove('open');
+                            const ov = document.getElementById('sidebarOverlay');
+                            if (ov) ov.classList.remove('active');
+                        }
+                    });
+                });
+            }
+
+            function initPage(root) {
+                root.querySelectorAll('.flash').forEach(f => {
+                    if (f.dataset.flashBound) return;
+                    f.dataset.flashBound = '1';
+                    const closeBtn = f.querySelector('.flash-close');
+                    if (closeBtn) closeBtn.addEventListener('click', () => removeFlash(f));
+                    setTimeout(() => removeFlash(f), 4000);
+                });
+                bindConfirm(root);
+                bindSidebarNav(root);
+            }
+
+            window.YG1 = { initPage: initPage, removeFlash: removeFlash };
+            initPage(document);
+
+            // Page scripts call this instead of DOMContentLoaded. On a cold load it
+            // defers until the DOM is parsed; after a partial swap the DOM is
+            // already ready so it runs at once. { once: true } means a swapped-out
+            // page can never strand a listener on document.
+            window.YG1.onReady = function(fn) {
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', fn, { once: true });
+                } else {
+                    fn();
+                }
+            };
 
             btnOk.addEventListener('click', function() {
                 if (pendingForm) pendingForm.submit();
@@ -1047,17 +1141,166 @@
                     sidebar.classList.remove('open');
                     sidebarOverlay.classList.remove('active');
                 });
-                // Close sidebar when clicking a nav link on mobile
-                sidebar.querySelectorAll('nav a').forEach(link => {
-                    link.addEventListener('click', function() {
-                        if (window.innerWidth <= 768) {
-                            sidebar.classList.remove('open');
-                            sidebarOverlay.classList.remove('active');
-                        }
-                    });
-                });
             }
         })();
     </script>
+    <script>
+    (function() {
+        if (window.__pjaxBooted) return;
+        window.__pjaxBooted = true;
+
+        const app = document.getElementById('app');
+        if (!app) return;
+        // The #page-scripts host is declared after this script, so resolve it lazily.
+        const getScriptHost = () => document.getElementById('page-scripts');
+
+        function destroyCharts() {
+            if (!window.Chart || !Chart.instances) return;
+            Object.keys(Chart.instances).forEach(k => {
+                try { Chart.instances[k].destroy(); } catch (e) {}
+            });
+        }
+
+        // flatpickr mounts its calendar on <body>, outside #app, so swapping the app
+        // markup would otherwise strand a stale calendar over the new page.
+        function destroyDatepickers() {
+            document.querySelectorAll('.flatpickr-calendar, .flatpickr-calendar-container')
+                .forEach(el => el.parentNode && el.parentNode.removeChild(el));
+            document.querySelectorAll('.flatpickr-input').forEach(input => {
+                input.classList.remove('flatpickr-input');
+                if (input._flatpickr && input._flatpickr.destroy) {
+                    try { input._flatpickr.destroy(); } catch (e) {}
+                }
+            });
+        }
+
+        // Scripts must be inserted into the LIVE document. A script node created
+        // inside the DOMParser document never runs, because that document has no
+        // browsing context.
+        function runScripts(parsed) {
+            const host = getScriptHost();
+            if (!host) return;
+            Array.from(parsed.querySelectorAll('script')).forEach(old => {
+                const s = document.createElement('script');
+                for (const attr of old.attributes) {
+                    if (attr.name === 'src') s.setAttribute('src', attr.value);
+                    else if (attr.name !== 'type') s.setAttribute(attr.name, attr.value);
+                }
+                s.textContent = old.textContent;
+                old.remove();
+                host.appendChild(s);
+            });
+        }
+
+        function syncActiveNav() {
+            const path = window.location.pathname;
+            document.querySelectorAll('.sidebar nav a').forEach(a => {
+                const href = a.getAttribute('href');
+                if (!href) return;
+                let match = false;
+                try {
+                    const u = new URL(href, window.location.origin);
+                    match = u.pathname === path ||
+                             (u.pathname !== '/' && path.startsWith(u.pathname + '/'));
+                } catch (e) { return; }
+                a.classList.toggle('active', match);
+            });
+        }
+
+        function swap(doc) {
+            const newApp = doc.getElementById('app');
+            if (!newApp) return false;
+            // Auth screens are not part of the app shell; let the browser load them.
+            if (doc.querySelector('.auth-split')) return false;
+
+            destroyCharts();
+            destroyDatepickers();
+
+            // Carry over flashes produced by the redirect we just followed.
+            const carried = document.createElement('div');
+            const incomingFlash = newApp.querySelector('.flash-container');
+            if (incomingFlash) carried.innerHTML = incomingFlash.outerHTML;
+            else {
+                const stale = document.querySelector('.flash-container');
+                if (stale) stale.remove();
+            }
+
+            app.innerHTML = newApp.innerHTML;
+            if (carried.firstElementChild) app.insertBefore(carried.firstElementChild, app.firstChild);
+
+            const host = getScriptHost();
+            if (host) host.innerHTML = '';
+            const newScripts = doc.getElementById('page-scripts');
+            if (newScripts) runScripts(newScripts);
+
+            document.body.className = doc.body.className || '';
+            document.title = doc.title;
+
+            const main = app.querySelector('.main');
+            if (main) main.scrollTop = 0;
+
+            if (window.YG1) window.YG1.initPage(app);
+            return true;
+        }
+
+        let busy = false;
+
+        async function navigate(url, push) {
+            if (busy) return;
+            busy = true;
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.classList.add('active');
+            try {
+                const res = await fetch(url, {
+                    headers: { 'X-PJAX': '1', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                    redirect: 'follow'
+                });
+                if (!res.ok) { window.location.href = url; return; }
+                // Session expiry lands on the login screen; hand off to a real load.
+                if (res.redirected && new URL(res.url).pathname === '/login') {
+                    window.location.href = res.url;
+                    return;
+                }
+                const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+                if (!swap(doc)) { window.location.href = url; return; }
+                // Update the URL before syncing the sidebar, otherwise the highlight
+                // is matched against the page we are leaving.
+                if (push) history.pushState({ pjax: true }, '', url);
+                syncActiveNav();
+            } catch (err) {
+                window.location.href = url;
+            } finally {
+                busy = false;
+                const ov = document.getElementById('loadingOverlay');
+                if (ov) ov.classList.remove('active');
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            if (e.defaultPrevented || e.button !== 0) return;
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            const link = e.target.closest && e.target.closest('a[href]');
+            if (!link) return;
+            if (link.hasAttribute('download') || link.getAttribute('target')) return;
+            if (link.classList.contains('no-loading')) return;
+            if (link.getAttribute('role') === 'button') return;
+            const href = link.getAttribute('href');
+            if (!href || href.startsWith('#')) return;
+            const url = new URL(link.href, window.location.origin);
+            if (url.origin !== window.location.origin) return;
+            if (url.pathname === '/logout') return;
+            e.preventDefault();
+            navigate(url.href, true);
+        });
+
+        window.addEventListener('popstate', function() {
+            navigate(window.location.href, false);
+        });
+    })();
+    </script>
+    <div id="page-scripts">
+    {% block scripts %}{% endblock %}
+    </div>
 </body>
 </html>
