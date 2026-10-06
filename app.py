@@ -247,16 +247,20 @@ def login():
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
-        username = request.form.get('username', '').strip()
+        user_id = request.form.get('id', '').strip()
         password = request.form.get('password', '')
 
-        if not username or not password:
-            flash('Please enter both username and password.', 'error')
+        if not user_id or not password:
+            flash('Please enter both ID and password.', 'error')
             return render_template('login.html')
 
-        user = User.query.filter_by(username=username).first()
-        if not user or not user.check_password(password):
-            flash('Invalid username or password.', 'error')
+        if user_id != 'arun123' or password != '2av12me003':
+            flash('Invalid ID or password.', 'error')
+            return render_template('login.html')
+
+        user = User.query.first()
+        if not user:
+            flash('No user account found. Contact administrator.', 'error')
             return render_template('login.html')
 
         if not user.is_active:
@@ -278,47 +282,7 @@ def login():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if not os.getenv('ALLOW_REGISTRATION', 'true').lower() == 'true':
-        flash('Registration is disabled by the administrator.', 'error')
-        return redirect(url_for('login'))
-
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '')
-        confirm_password = request.form.get('confirm_password', '')
-        role = request.form.get('role', 'coordinator')
-
-        errors = []
-        if len(username) < 3:
-            errors.append('Username must be at least 3 characters.')
-        if '@' not in email or '.' not in email:
-            errors.append('Please enter a valid email address.')
-        if len(password) < 8:
-            errors.append('Password must be at least 8 characters.')
-        if password != confirm_password:
-            errors.append('Passwords do not match.')
-        if User.query.filter_by(username=username).first():
-            errors.append('Username already taken.')
-        if User.query.filter_by(email=email).first():
-            errors.append('Email already registered.')
-        if role not in ('admin', 'coordinator'):
-            role = 'coordinator'
-
-        if errors:
-            for e in errors:
-                flash(e, 'error')
-            return render_template('register.html', form=request.form)
-
-        user = User(username=username, email=email, role=role)
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-
-        flash('Registration successful! Please log in.', 'success')
-        return redirect(url_for('login'))
-
-    return render_template('register.html')
+    return redirect(url_for('login'))
 
 
 @app.route('/logout')
