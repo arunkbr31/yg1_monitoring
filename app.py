@@ -8,10 +8,11 @@ from datetime import datetime, date, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from functools import wraps
+from io import BytesIO
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
-    flash, session, jsonify, abort
+    flash, session, jsonify, abort, send_file
 )
 from flask_login import (
     LoginManager, login_user, logout_user,
@@ -511,6 +512,228 @@ def audits():
         plants=PLANTS,
         zones=ZONES,
         zonal_leaders=ZONAL_LEADERS,
+    )
+
+
+def _audit_export_rows(hod_query):
+    query = Audit.query.order_by(Audit.created_at.desc())
+    if hod_query:
+        query = query.filter(Audit.responsible_hod.ilike(f'%{hod_query}%'))
+    return query.all()
+
+
+def _audit_export_columns(audit):
+    return [
+        audit.id,
+        audit.audit_date.strftime('%d-%m-%Y') if audit.audit_date else '',
+        audit.plant or '',
+        audit.zone or '',
+        audit.zonal_leader or '',
+        audit.nc_category or '',
+        audit.description or '',
+        audit.action_taken_details or '',
+        audit.responsible_hod or '',
+        audit.responsible_email or '',
+        audit.target_date.strftime('%d-%m-%Y') if audit.target_date else '',
+        (audit.status or '').capitalize(),
+    ]
+
+
+EXPORT_HEADERS = [
+    'ID', 'Audit Date', 'Plant', 'Zone', 'Zonal Leader',
+    'NC Category', 'Description of NC', 'Action Taken',
+    'Responsible HOD', 'Responsible Email', 'Target Date', 'Status',
+]
+
+
+@app.route('/audits/export/pdf')
+@login_required
+def export_audits_pdf():
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib import colors
+    from reportlab.platypus import (
+        SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer,
+    )
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+
+    hod_query = request.args.get('hod', '').strip()
+    audits = _audit_export_rows(hod_query)
+
+    buffer = BytesIO()
+    page_width, page_height = landscape(A4)
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        rightMargin=15 * mm,
+        leftMargin=15 * mm,
+        topMargin=28 * mm,
+        bottomMargin=18 * mm,
+    )
+
+    logo_path = os.path.join(app.static_folder, 'images', 'yg1_images.png')
+    export_time = datetime.utcnow().strftime('%d-%m-%Y %H:%M')
+
+    def add_header_footer(canvas, doc_obj):
+        canvas.saveState()
+        canvas.setFillColor(colors.white)
+        canvas.rect(0, page_height - 28 * mm, page_width, 28 * mm, fill=1)
+        canvas.setFillColor(colors.HexColor('#2563eb'))
+        canvas.setFont('Helvetica-Bold', 15)
+        canvas.drawString(doc_obj.leftMargin, page_height - 16 * mm, 'YG1')
+        canvas.setFillColor(colors.HexColor('#f5c520'))
+        canvas.drawString(doc_obj.leftMargin + 34, page_height - 16 * mm, 'Monitoring')
+        canvas.setFillColor(colors.HexColor('#64748b'))
+        canvas.setFont('Helvetica', 8)
+        filter_note = f'Filtered by HOD: {hod_query}' if hod_query else 'All Records'
+        canvas.drawString(doc_obj.leftMargin, page_height - 23, filter_note)
+        canvas.setFillColor(colors.HexColor('#94a3b8'))
+        canvas.setFont('Helvetica', 7)
+        canvas.drawRightString(page_width - doc_obj.rightMargin, page_height - 23, f'Records: {len(audits)}')
+        if os.path.exists(logo_path):
+            canvas.drawImage(
+                logo_path, page_width - doc_obj.rightMargin - 24, page_height - 18 * mm,
+                width=24, height=24, preserveAspectRatio=True, mask='auto',
+            )
+        canvas.setStrokeColor(colors.HexColor('#e2e8f0'))
+        canvas.setLineWidth(0.5)
+        canvas.line(doc_obj.leftMargin, 18 * mm, page_width - doc_obj.rightMargin, 18 * mm)
+        canvas.setFillColor(colors.HexColor('#94a3b8'))
+        canvas.setFont('Helvetica', 8)
+        canvas.drawString(doc_obj.leftMargin, 8, f'Exported on {export_time}')
+        canvas.drawRightString(page_width - doc_obj.rightMargin, 8, f'Page {canvas.getPageNumber()}')
+        canvas.restoreState()
+
+    styles = getSampleStyleSheet()
+    summary_style = ParagraphStyle(
+        'Summary',
+        parent=styles['Normal'],
+        fontSize=8,
+        leading=10,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#64748b'),
+        spaceAfter=12,
+    )
+
+    elements = []
+    filter_str = f' (Filtered by HOD: {hod_query})' if hod_query else ''
+    elements.append(Paragraph(
+        f'<b style="color:#1e293b; font-size:18px;">YG1 Audit Records{filter_str}</b>',
+        ParagraphStyle('H1', parent=styles['Title'], alignment=TA_CENTER, spaceAfter=4),
+    ))
+    elements.append(Paragraph(
+        f'{export_time} &nbsp;|&nbsp; Total Records: {len(audits)}',
+        summary_style,
+    ))
+
+    cell_style = ParagraphStyle(
+        'Cell',
+        parent=styles['Normal'],
+        fontSize=7,
+        leading=9,
+        alignment=TA_LEFT,
+        textColor=colors.HexColor('#334155'),
+        wordWrap='LTR',
+    )
+    header_style = ParagraphStyle(
+        'Header',
+        parent=cell_style,
+        fontSize=7,
+        fontName='Helvetica-Bold',
+        textColor=colors.white,
+        alignment=TA_CENTER,
+        wordWrap='LTR',
+    )
+
+    pdf_headers = ['S.No'] + EXPORT_HEADERS[1:]
+    table_data = [[Paragraph(h, header_style) for h in pdf_headers]]
+    for serial_no, audit in enumerate(audits, start=1):
+        cols = _audit_export_columns(audit)
+        cols[0] = serial_no
+        table_data.append([Paragraph(str(c), cell_style) for c in cols])
+
+    col_widths = [
+        12 * mm, 20 * mm, 18 * mm, 18 * mm, 22 * mm, 19 * mm,
+        34 * mm, 34 * mm, 25 * mm, 33 * mm, 20 * mm, 16 * mm,
+    ]
+    table = Table(table_data, colWidths=col_widths, repeatRows=1, hAlign='LEFT')
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2563eb')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#e2e8f0')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f8fafc')]),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    elements.append(table)
+
+    doc.build(elements, onFirstPage=add_header_footer, onLaterPages=add_header_footer)
+
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f'yg1_audits_{datetime.utcnow().strftime("%Y%m%d_%H%M")}.pdf',
+        mimetype='application/pdf',
+    )
+
+
+@app.route('/audits/export/excel')
+@login_required
+def export_audits_excel():
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    hod_query = request.args.get('hod', '').strip()
+    audits = _audit_export_rows(hod_query)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Audit Records'
+
+    header_font = Font(bold=True, color='FFFFFF', size=11)
+    header_fill = PatternFill(start_color='2563EB', end_color='2563EB', fill_type='solid')
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin'),
+    )
+    wrap_alignment = Alignment(wrap_text=True, vertical='top', horizontal='left')
+
+    ws.append(EXPORT_HEADERS)
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = wrap_alignment
+        cell.border = thin_border
+
+    for audit in audits:
+        row = _audit_export_columns(audit)
+        ws.append(row)
+        for cell in ws[ws.max_row]:
+            cell.border = thin_border
+            cell.alignment = wrap_alignment
+
+    column_widths = [10, 14, 14, 14, 16, 14, 30, 26, 20, 24, 14, 12]
+    for col_idx, width in enumerate(column_widths, 1):
+        ws.column_dimensions[ws.cell(row=1, column=col_idx).column_letter].width = width
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=f'yg1_audits_{datetime.utcnow().strftime("%Y%m%d_%H%M")}.xlsx',
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
 
 

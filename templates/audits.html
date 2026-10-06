@@ -67,6 +67,14 @@
                         <a href="{{ url_for('audits') }}" class="btn btn-outline btn-sm">Clear</a>
                         {% endif %}
                     </form>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <a href="{{ url_for('export_audits_pdf', hod=request.args.get('hod', '')) }}" class="btn btn-warning btn-sm no-loading">
+                            📄 Download PDF
+                        </a>
+                        <a href="{{ url_for('export_audits_excel', hod=request.args.get('hod', '')) }}" class="btn btn-success btn-sm no-loading">
+                            📊 Download excel
+                        </a>
+                    </div>
                 </div>
             <div class="table-scroll">
                 <table>

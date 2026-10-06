@@ -5,3 +5,5 @@ flask-wtf==1.2.1
 werkzeug==3.0.3
 email-validator==2.2.0
 python-dotenv==1.0.1
+reportlab==5.0.1
+openpyxl==3.1.5
