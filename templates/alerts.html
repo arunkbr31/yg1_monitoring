@@ -19,16 +19,8 @@
             <a href="{{ url_for('rules') }}"><span class="icon">📋</span> <span>Rules</span></a>
             <a href="{{ url_for('alerts') }}" class="active"><span class="icon">🔔</span> <span>Alerts</span></a>
             <a href="{{ url_for('mail_logs') }}"><span class="icon">📧</span> <span>Mail Logs</span></a>
-            {% if current_user.role == 'admin' %}
-            <div class="nav-label">Admin</div>
-            <a href="{{ url_for('users') }}"><span class="icon">👥</span> <span>Users</span></a>
-            {% endif %}
         </nav>
         <div class="user-box">
-            <div class="user-info">
-                <strong>{{ current_user.username }}</strong>
-                <span>{{ current_user.role|capitalize }} · {{ current_user.email }}</span>
-            </div>
             <a href="{{ url_for('logout') }}" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; font-size:14px; color:#fca5a5; transition:background .2s;">
                 <span class="icon">🚪</span> <span>Logout</span>
             </a>

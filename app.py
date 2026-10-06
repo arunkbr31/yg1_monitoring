@@ -259,7 +259,7 @@ def login():
             flash('Invalid ID or password.', 'error')
             return render_template('login.html')
 
-        user = User.query.first()
+        user = User.query.filter_by(username=user_id).first()
         if not user:
             flash('No user account found. Contact administrator.', 'error')
             return render_template('login.html')
@@ -271,7 +271,7 @@ def login():
         login_user(user, remember=request.form.get('remember') == 'on')
         session['last_login'] = datetime.utcnow().isoformat()
         session['last_seen'] = time.time()
-        flash(f'Welcome back, {user.username}!', 'success')
+        flash('Login successful!', 'success')
 
         next_page = request.args.get('next')
         if next_page and next_page.startswith('/'):
@@ -922,34 +922,6 @@ def hod_detail(hod):
         available_dates=available_dates,
         selected_date=selected_date,
     )
-
-
-@app.route('/users')
-@login_required
-def users():
-    if current_user.role != 'admin':
-        flash('Access denied. Administrators only.', 'error')
-        return redirect(url_for('dashboard'))
-    all_users = User.query.all()
-    return render_template('users.html', users=all_users)
-
-
-@app.route('/users/deactivate/<int:user_id>', methods=['POST'])
-@login_required
-def deactivate_user(user_id):
-    if current_user.role != 'admin':
-        flash('Access denied.', 'error')
-        return redirect(url_for('dashboard'))
-    if user_id == current_user.id:
-        flash('You cannot deactivate your own account.', 'error')
-        return redirect(url_for('users'))
-    user = db.session.get(User, user_id)
-    if user:
-        user.is_active = not user.is_active
-        db.session.commit()
-        action = 'deactivated' if not user.is_active else 'activated'
-        flash(f'User {user.username} {action}.', 'info')
-    return redirect(url_for('users'))
 
 
 def create_audit_alert(audit):
