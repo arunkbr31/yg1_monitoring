@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Audits | YG1 Monitoring{% endblock %}
+{% block body_class %}audits-page{% endblock %}
 {% block content %}
 <div class="layout">
     <aside class="sidebar">
@@ -48,8 +49,8 @@
             {% endif %}
         {% endwith %}
 
-            <div class="card">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+            <div class="card" style="display:flex; flex-direction:column; height:calc(100vh - 160px);">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; flex-shrink:0;">
                     <h3 style="margin:0;">All Audit Records</h3>
                     <form method="GET" action="{{ url_for('audits') }}" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                         <label for="hod_search" style="font-size:13px; font-weight:600; color:var(--text-light);">Search Responsible HOD:</label>
@@ -59,16 +60,8 @@
                         <a href="{{ url_for('audits') }}" class="btn btn-outline btn-sm">Clear</a>
                         {% endif %}
                     </form>
-                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                        <a href="{{ url_for('export_audits_pdf', hod=request.args.get('hod', '')) }}" class="btn btn-warning btn-sm no-loading">
-                            📄 Download PDF
-                        </a>
-                        <a href="{{ url_for('export_audits_excel', hod=request.args.get('hod', '')) }}" class="btn btn-success btn-sm no-loading">
-                            📊 Download excel
-                        </a>
-                    </div>
                 </div>
-            <div class="table-scroll">
+            <div class="table-scroll" style="flex:1; min-height:0;">
                 <table>
                     <thead>
                         <tr>
@@ -200,6 +193,14 @@
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; margin-top:16px; padding-top:16px; border-top:1px solid var(--gray-border); flex-shrink:0;">
+                <a href="{{ url_for('export_audits_pdf', hod=request.args.get('hod', '')) }}" class="btn btn-warning btn-sm no-loading">
+                    📄 Download PDF
+                </a>
+                <a href="{{ url_for('export_audits_excel', hod=request.args.get('hod', '')) }}" class="btn btn-success btn-sm no-loading">
+                    📊 Download Excel
+                </a>
             </div>
             <form id="audit-new" method="POST" action="{{ url_for('save_audit') }}" enctype="multipart/form-data"></form>
             {% for a in audits %}

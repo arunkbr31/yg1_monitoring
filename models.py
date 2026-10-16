@@ -28,6 +28,7 @@ class Rule(db.Model):
     item = db.Column(db.String(100), nullable=False)
     required_location = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
+    file_attachment = db.Column(db.String(200))
 
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -84,6 +85,7 @@ class Alert(db.Model):
     responsible_email = db.Column(db.String(120), nullable=False)
     sent_at = db.Column(db.DateTime, default=datetime.utcnow)
     acknowledged = db.Column(db.Boolean, default=False)
+    reminder_sent_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def __repr__(self):

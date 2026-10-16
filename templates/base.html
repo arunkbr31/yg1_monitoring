@@ -402,6 +402,87 @@
         }
         .forgot-hint.show { display: block; }
 
+        /* ── Login page: rich, image-toned theme for yg1_images.webp ──
+           The photo is light blue-gray, so a cool dark-blue scrim tones it
+           into a moody backdrop while keeping the image texture visible, and
+           the card floats above it as frosted glass with blue accents that
+           echo the photo's own palette. ── */
+        .auth-split-body.auth-login {
+            background-color: #0b0e13;
+            background-image:
+                radial-gradient(circle at 20% 30%, rgba(96,165,250,.22) 0%, transparent 52%),
+                radial-gradient(circle at 80% 70%, rgba(147,197,253,.18) 0%, transparent 52%),
+                radial-gradient(circle at 52% 132%, rgba(245,247,252,.30) 0%, transparent 58%),
+                url("{{ url_for('static', filename='images/yg1_images.webp') }}");
+        }
+        /* dark scrim over the image so it reads as a backdrop, not a glare */
+        .auth-split-body.auth-login::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(15,23,42,.58) 0%, rgba(30,58,138,.46) 52%, rgba(15,23,42,.62) 100%);
+            pointer-events: none;
+        }
+        .auth-login .auth-panel {
+            background: linear-gradient(145deg, rgba(15,23,42,.84) 0%, rgba(17,24,46,.74) 100%);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(96,165,250,.34);
+            box-shadow:
+                0 30px 70px rgba(0,0,0,.6),
+                0 8px 22px rgba(30,58,138,.38),
+                inset 0 1px 0 rgba(255,255,255,.08);
+        }
+        .auth-login .auth-panel::before {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa 45%, #93c5fd 100%);
+        }
+        .auth-login .auth-panel-head h2 {
+            color: #f8fafc;
+            text-shadow: 0 0 10px rgba(56,189,248,.45);
+        }
+        .auth-login .auth-panel-head .panel-tag {
+            color: #93c5fd;
+            background: rgba(37,99,235,.10);
+            border-color: rgba(96,165,250,.36);
+        }
+        .auth-login .auth-panel-head .panel-hint { color: #94a3b8; }
+        .auth-login .panel-icon {
+            color: #60a5fa;
+            background: linear-gradient(145deg, rgba(37,99,235,.15), rgba(147,197,253,.2));
+            box-shadow:
+                0 10px 26px rgba(37,99,235,.28),
+                inset 0 1px 0 rgba(255,255,255,.1);
+            border-color: rgba(96,165,250,.38);
+        }
+        .auth-login .field > label { color: #cbd5e1; }
+        .auth-login .input-wrap .lead-icon,
+        .auth-login .input-wrap .caret { color: #93c5fd; }
+        .auth-login .input-wrap input:focus,
+        .auth-login .input-wrap select:focus {
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 4px rgba(96,165,250,.34);
+        }
+        .auth-login .toggle-pw { color: #94a3b8; }
+        .auth-login .toggle-pw:hover { color: #60a5fa; background: rgba(37,99,235,.18); }
+        .auth-login .signin-btn {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #ffffff;
+            box-shadow: 0 10px 24px rgba(37,99,235,.44);
+        }
+        .auth-login .signin-btn:hover {
+            box-shadow: 0 14px 30px rgba(37,99,235,.58);
+        }
+        .auth-login .panel-note { color: #94a3b8; }
+        .auth-login .panel-note a { color: #60a5fa; }
+        .auth-login .forgot-link { color: #60a5fa; }
+        .auth-login .forgot-link:hover { color: #93c5fd; }
+        .auth-login .forgot-hint {
+            color: #93c5fd;
+            background: rgba(37,99,235,.10);
+            border-color: rgba(96,165,250,.32);
+        }
+
+
         /* Auth split-screen responsive */
         @media (max-width: 1024px) {
             .auth-form-side { padding: 0; }
@@ -770,8 +851,8 @@
         }
         tbody tr:nth-child(even) { background: #fafbfc; }
 
-        /* HOD Summary - fix table (no horizontal scroll), remove page-level vertical scroll */
-        .hod-summary-page .table-scroll { overflow-x: hidden; }
+        /* HOD Summary - let table scroll horizontally within itself, remove page-level vertical scroll */
+        .hod-summary-page .table-scroll { overflow-x: auto; }
         .hod-summary-page .main { overflow-y: hidden; }
 
         /* HOD Summary table enhancements */
@@ -786,10 +867,9 @@
             font-size: 14px;
         }
         /* Column widths - scoped to HOD Summary only (4-column layout) */
-        .hod-summary-page .table-scroll tbody td:nth-child(1) { width: 40%; }
         .hod-summary-page .table-scroll tbody td:nth-child(2),
         .hod-summary-page .table-scroll tbody td:nth-child(3),
-        .hod-summary-page .table-scroll tbody td:nth-child(4) { width: 20%; text-align: center; }
+        .hod-summary-page .table-scroll tbody td:nth-child(4) { text-align: center; }
         .hod-summary-page .table-scroll thead th:nth-child(2),
         .hod-summary-page .table-scroll thead th:nth-child(3),
         .hod-summary-page .table-scroll thead th:nth-child(4) { text-align: center; }
@@ -878,6 +958,9 @@
         .alerts-scroll .alert-item:nth-child(even) { background: #fefef8; }
         /* Alerts page - remove page-level vertical scroll */
         .alerts-page .main { overflow-y: hidden; }
+
+        /* Audits page - remove page-level vertical scroll, keep table-internal scroll */
+        .audits-page .main { overflow-y: hidden; }
 
         .rule-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
         .rule-card {

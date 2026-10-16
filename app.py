@@ -1,12 +1,9 @@
 import os
-import smtplib
 import resend
-import ssl
+import threading
 import time
 import uuid
 from datetime import datetime, date, timedelta
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from functools import wraps
 from io import BytesIO
 
@@ -41,6 +38,8 @@ IDLE_TIMEOUT_SECONDS = 30 * 60
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+ALLOWED_RULE_EXTENSIONS = {'csv', 'json', 'txt'}
+ALLOWED_ATTACHMENT_EXTENSIONS = {'pdf', 'docx', 'doc', 'txt', 'csv', 'json', 'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 PLANTS = ['Plant 1', 'Plant 2', 'Plant 3']
 
@@ -57,10 +56,40 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def allowed_rule_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_RULE_EXTENSIONS
+
+
 def save_upload(file_storage):
     if not file_storage or file_storage.filename == '':
         return None
     if not allowed_file(file_storage.filename):
+        return None
+    ext = file_storage.filename.rsplit('.', 1)[1].lower()
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    file_storage.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    return filename
+
+
+def save_rule_upload(file_storage):
+    if not file_storage or file_storage.filename == '':
+        return None
+    if not allowed_rule_file(file_storage.filename):
+        return None
+    ext = file_storage.filename.rsplit('.', 1)[1].lower()
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    file_storage.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    return filename
+
+
+def allowed_attachment_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_ATTACHMENT_EXTENSIONS
+
+
+def save_attachment(file_storage):
+    if not file_storage or file_storage.filename == '':
+        return None
+    if not allowed_attachment_file(file_storage.filename):
         return None
     ext = file_storage.filename.rsplit('.', 1)[1].lower()
     filename = f"{uuid.uuid4().hex}.{ext}"
@@ -103,11 +132,8 @@ def set_security_headers(response):
 
 
 def send_email(to_email, subject, body_text, body_html=None):
-    smtp_host = os.getenv('SMTP_HOST', '').strip()
-    smtp_port = int(os.getenv('SMTP_PORT', '587') or '587')
-    smtp_user = os.getenv('SMTP_USERNAME', '').strip()
-    smtp_pass = os.getenv('SMTP_PASSWORD', '').strip()
-    from_email = os.getenv('ALERT_FROM_EMAIL', '').strip() or smtp_user
+    resend_api_key = os.getenv('RESEND_API_KEY', '').strip()
+    from_email = os.getenv('RESEND_FROM_EMAIL', 'onboarding@resend.dev').strip()
 
     log_entry = MailLog(
         recipient=to_email,
@@ -117,8 +143,8 @@ def send_email(to_email, subject, body_text, body_html=None):
         error=None,
     )
 
-    if not smtp_host or not smtp_user or not smtp_pass:
-        error_msg = 'SMTP not configured. Set SMTP_HOST, SMTP_USERNAME, SMTP_PASSWORD in .env'
+    if not resend_api_key:
+        error_msg = 'RESEND_API_KEY not configured in .env'
         log_entry.error = error_msg
         db.session.add(log_entry)
         db.session.commit()
@@ -126,20 +152,18 @@ def send_email(to_email, subject, body_text, body_html=None):
         print(f"  Body: {body_text}")
         return False, error_msg
 
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject
-    msg['From'] = from_email
-    msg['To'] = to_email
-    msg.attach(MIMEText(body_text, 'plain'))
-    if body_html:
-        msg.attach(MIMEText(body_html, 'html'))
-
-    context = ssl.create_default_context()
     try:
-        with smtplib.SMTP(smtp_host, smtp_port) as server:
-            server.starttls(context=context)
-            server.login(smtp_user, smtp_pass)
-            server.sendmail(from_email, to_email, msg.as_string())
+        import resend
+        resend.api_key = resend_api_key
+        params = {
+            "from": from_email,
+            "to": [to_email],
+            "subject": subject,
+            "text": body_text,
+        }
+        if body_html:
+            params["html"] = body_html
+        resend.Emails.send(params)
         log_entry.status = 'sent'
         db.session.add(log_entry)
         db.session.commit()
@@ -152,6 +176,78 @@ def send_email(to_email, subject, body_text, body_html=None):
         db.session.commit()
         print(f"[EMAIL FAILED] {error_msg}")
         return False, error_msg
+
+
+REMINDER_DAYS = int(os.getenv('ALERT_REMINDER_DAYS', '6'))
+REMINDER_CHECK_INTERVAL = int(os.getenv('ALERT_REMINDER_INTERVAL_SECONDS', '300'))
+_scheduler_started = False
+
+
+def send_due_alert_reminders():
+    """Send one reminder email for each alert that is still open (not
+    acknowledged) and was created at least ALERT_REMINDER_DAYS ago.
+    Each alert is reminded only once, stamped via reminder_sent_at, and
+    only the responsible_email on record receives it."""
+    with app.app_context():
+        cutoff = datetime.utcnow() - timedelta(days=REMINDER_DAYS)
+        due = (Alert.query
+               .filter(Alert.acknowledged.is_(False),
+                       Alert.reminder_sent_at.is_(None),
+                       Alert.created_at <= cutoff)
+               .all())
+        for alert in due:
+            audit = db.session.get(Audit, alert.audit_id)
+            if not audit:
+                alert.reminder_sent_at = datetime.utcnow()
+                db.session.commit()
+                continue
+            subject = f"[Reminder] Overdue: {alert.subject}"
+            created_str = alert.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            body_text = (
+                f"REMINDER: This alert is still OPEN and overdue "
+                f"(opened {REMINDER_DAYS} day(s) ago).\n\n"
+                f"Subject: {alert.subject}\n"
+                f"Responsible HOD: {audit.responsible_hod}\n"
+                f"Responsible Email: {alert.responsible_email}\n"
+                f"Created: {created_str}\n"
+                f"Audit Status: {audit.status}\n\n"
+                f"Details:\n{alert.message}\n\n"
+                "Please take immediate action and acknowledge this alert once resolved."
+            )
+            body_html = (
+                f"<h3>REMINDER: {alert.subject}</h3>"
+                f"<p>This alert is still <strong>OPEN</strong> and overdue "
+                f"(opened {REMINDER_DAYS} day(s) ago).</p>"
+                f"<p><strong>Responsible HOD:</strong> {audit.responsible_hod}<br>"
+                f"<strong>Email:</strong> {alert.responsible_email}<br>"
+                f"<strong>Created:</strong> {created_str}<br>"
+                f"<strong>Audit Status:</strong> {audit.status}</p>"
+                f"<p>{alert.message.replace(chr(10), '<br>')}</p>"
+                f"<p>Please take immediate action and acknowledge this alert once resolved.</p>"
+            )
+            sent, error_msg = send_email(alert.responsible_email, subject, body_text, body_html)
+            if sent:
+                alert.reminder_sent_at = datetime.utcnow()
+                db.session.commit()
+            status = 'sent' if sent else f'failed: {error_msg}'
+            print(f"[REMINDER] alert#{alert.id} -> {alert.responsible_email} ({status})")
+
+
+def _reminder_loop():
+    while True:
+        try:
+            send_due_alert_reminders()
+        except Exception as e:
+            print(f"[REMINDER] check failed: {e}")
+        time.sleep(REMINDER_CHECK_INTERVAL)
+
+
+def _start_alert_reminder_scheduler():
+    global _scheduler_started
+    if _scheduler_started:
+        return
+    _scheduler_started = True
+    threading.Thread(target=_reminder_loop, daemon=True).start()
 
 
 def normalize_choice(value, options):
@@ -203,6 +299,20 @@ def run_migrations():
             if leader != audit.zonal_leader and leader in ZONAL_LEADERS:
                 audit.zonal_leader = leader
 
+    if 'alert' in inspector.get_table_names():
+        alert_cols = {c['name'] for c in inspector.get_columns('alert')}
+        if 'reminder_sent_at' not in alert_cols:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE alert ADD COLUMN reminder_sent_at DATETIME"))
+            print('[OK] Migration: added alert.reminder_sent_at column')
+
+    if 'rule' in inspector.get_table_names():
+        rule_cols = {c['name'] for c in inspector.get_columns('rule')}
+        if 'file_attachment' not in rule_cols:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE rule ADD COLUMN file_attachment VARCHAR(200)"))
+            print('[OK] Migration: added rule.file_attachment column')
+
 
 def get_status_counts():
     total = Audit.query.count()
@@ -212,6 +322,28 @@ def get_status_counts():
         'total': total,
         'open': open_count,
         'closed': closed_count,
+    }
+
+
+def get_alert_counts():
+    """Pending alert counts for the dashboard.
+
+    `open`     -> alerts still pending (not acknowledged)
+    `overdue`  -> pending alerts older than ALERT_REMINDER_DAYS (i.e. due a reminder)
+    `acknowledged` -> resolved alerts
+    """
+    cutoff = datetime.utcnow() - timedelta(days=REMINDER_DAYS)
+    base = Alert.query
+    open_count = base.filter(Alert.acknowledged.is_(False)).count()
+    overdue_count = base.filter(
+        Alert.acknowledged.is_(False),
+        Alert.created_at <= cutoff,
+    ).count()
+    acknowledged_count = base.filter(Alert.acknowledged.is_(True)).count()
+    return {
+        'open': open_count,
+        'overdue': overdue_count,
+        'acknowledged': acknowledged_count,
     }
 
 
@@ -306,6 +438,7 @@ def dashboard():
         audits=audits,
         alerts=alerts,
         counts=counts,
+        alert_counts=get_alert_counts(),
         now=datetime.utcnow()
     )
 
@@ -438,11 +571,15 @@ def add_rule():
                 flash(e, 'error')
             return render_template('rule_form.html', form=request.form)
 
+        attachment_file = request.files.get('file_attachment')
+        attachment_name = save_attachment(attachment_file)
+
         rule = Rule(
             rule_name=rule_name,
             item=item,
             required_location=required_location,
             description=description,
+            file_attachment=attachment_name,
         )
         db.session.add(rule)
         db.session.commit()
@@ -480,6 +617,19 @@ def edit_rule(rule_id):
                 flash(e, 'error')
             return render_template('rule_form.html', rule=rule, form=request.form)
 
+        attachment_file = request.files.get('file_attachment')
+        if attachment_file and attachment_file.filename:
+            old_attachment = rule.file_attachment
+            if old_attachment:
+                old_path = os.path.join(app.config['UPLOAD_FOLDER'], old_attachment)
+                try:
+                    os.remove(old_path)
+                except OSError:
+                    pass
+            new_attachment = save_attachment(attachment_file)
+            if new_attachment:
+                rule.file_attachment = new_attachment
+
         db.session.commit()
         flash('Rule updated successfully!', 'success')
         return redirect(url_for('rules'))
@@ -496,6 +646,212 @@ def delete_rule(rule_id):
         db.session.commit()
         flash('Rule deleted.', 'info')
     return redirect(url_for('rules'))
+
+
+ALLOWED_PREVIEW_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+
+@app.route('/rules/attachment/<int:rule_id>')
+@login_required
+def rule_attachment(rule_id):
+    rule = db.session.get(Rule, rule_id)
+    if not rule or not rule.file_attachment:
+        flash('Attachment not found.', 'error')
+        return redirect(url_for('rules'))
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], rule.file_attachment)
+    if not os.path.exists(filepath):
+        flash('Attachment file is missing on disk.', 'error')
+        return redirect(url_for('rules'))
+    ext = rule.file_attachment.rsplit('.', 1)[1].lower() if '.' in rule.file_attachment else ''
+    mimetype = {
+        'pdf': 'application/pdf',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'doc': 'application/msword',
+        'txt': 'text/plain',
+        'csv': 'text/csv',
+        'json': 'application/json',
+        'png': 'image/png',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+    }.get(ext, 'application/octet-stream')
+    return send_file(filepath, as_attachment=False, mimetype=mimetype)
+
+
+@app.route('/rules/attachment/download/<int:rule_id>')
+@login_required
+def rule_attachment_download(rule_id):
+    rule = db.session.get(Rule, rule_id)
+    if not rule or not rule.file_attachment:
+        flash('Attachment not found.', 'error')
+        return redirect(url_for('rules'))
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], rule.file_attachment)
+    if not os.path.exists(filepath):
+        flash('Attachment file is missing on disk.', 'error')
+        return redirect(url_for('rules'))
+    return send_file(filepath, as_attachment=True, download_name=rule.file_attachment)
+
+
+@app.route('/rules/upload', methods=['GET', 'POST'])
+@login_required
+def upload_rules():
+    # Only allow admin users to upload rules
+    if current_user.role != 'admin':
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('rules'))
+    
+    if request.method == 'POST':
+        if 'rule_file' not in request.files:
+            flash('No file part', 'error')
+            return redirect(request.url)
+        
+        file = request.files['rule_file']
+        if file.filename == '':
+            flash('No selected file', 'error')
+            return redirect(request.url)
+        
+        if file and allowed_rule_file(file.filename):
+            filename = save_rule_upload(file)
+            if filename:
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                try:
+                    rules_created = 0
+                    errors = []
+                    
+                    # Parse CSV file
+                    if filename.endswith('.csv'):
+                        import csv
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            reader = csv.DictReader(f)
+                            for row_num, row in enumerate(reader, start=2):  # start at 2 since header is row 1
+                                try:
+                                    rule_name = row.get('rule_name', '').strip()
+                                    item = row.get('item', '').strip()
+                                    required_location = row.get('required_location', '').strip()
+                                    description = row.get('description', '').strip()
+                                    
+                                    if not rule_name:
+                                        errors.append(f'Row {row_num}: Rule Name is required.')
+                                        continue
+                                    if not item:
+                                        errors.append(f'Row {row_num}: Item is required.')
+                                        continue
+                                    if not required_location:
+                                        errors.append(f'Row {row_num}: Required Location is required.')
+                                        continue
+                                    
+                                    rule = Rule(
+                                        rule_name=rule_name,
+                                        item=item,
+                                        required_location=required_location,
+                                        description=description,
+                                    )
+                                    db.session.add(rule)
+                                    rules_created += 1
+                                except Exception as e:
+                                    errors.append(f'Row {row_num}: Error processing row - {str(e)}')
+                    
+                    # Parse JSON file
+                    elif filename.endswith('.json'):
+                        import json
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                            if not isinstance(data, list):
+                                errors.append('JSON file must contain an array of rule objects')
+                            else:
+                                for index, item in enumerate(data):
+                                    try:
+                                        rule_name = item.get('rule_name', '').strip()
+                                        item_name = item.get('item', '').strip()
+                                        required_location = item.get('required_location', '').strip()
+                                        description = item.get('description', '').strip()
+                                        
+                                        if not rule_name:
+                                            errors.append(f'Item {index + 1}: Rule Name is required.')
+                                            continue
+                                        if not item_name:
+                                            errors.append(f'Item {index + 1}: Item is required.')
+                                            continue
+                                        if not required_location:
+                                            errors.append(f'Item {index + 1}: Required Location is required.')
+                                            continue
+                                            
+                                        rule = Rule(
+                                            rule_name=rule_name,
+                                            item=item_name,
+                                            required_location=required_location,
+                                            description=description,
+                                        )
+                                        db.session.add(rule)
+                                        rules_created += 1
+                                    except Exception as e:
+                                        errors.append(f'Item {index + 1}: Error processing item - {str(e)}')
+                    
+                    # Parse TXT file (simple format: rule_name|item|required_location|description per line)
+                    elif filename.endswith('.txt'):
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            for line_num, line in enumerate(f, start=1):
+                                line = line.strip()
+                                if not line:
+                                    continue
+                                parts = line.split('|')
+                                if len(parts) < 3:
+                                    errors.append(f'Line {line_num}: Invalid format. Expected: rule_name|item|required_location|description')
+                                    continue
+                                
+                                rule_name = parts[0].strip()
+                                item_name = parts[1].strip()
+                                required_location = parts[2].strip()
+                                description = parts[3].strip() if len(parts) > 3 else ''
+                                
+                                if not rule_name:
+                                    errors.append(f'Line {line_num}: Rule Name is required.')
+                                    continue
+                                if not item_name:
+                                    errors.append(f'Line {line_num}: Item is required.')
+                                    continue
+                                if not required_location:
+                                    errors.append(f'Line {line_num}: Required Location is required.')
+                                    continue
+                                
+                                rule = Rule(
+                                    rule_name=rule_name,
+                                    item=item_name,
+                                    required_location=required_location,
+                                    description=description,
+                                )
+                                db.session.add(rule)
+                                rules_created += 1
+                    
+                    if errors:
+                        for error in errors[:5]:  # Show first 5 errors
+                            flash(error, 'error')
+                        if len(errors) > 5:
+                            flash(f'And {len(errors) - 5} more errors...', 'error')
+                        db.session.rollback()
+                    else:
+                        db.session.commit()
+                        flash(f'Successfully created {rules_created} rules from {filename}', 'success')
+                        return redirect(url_for('rules'))
+                        
+                except Exception as e:
+                    flash(f'Error processing file: {str(e)}', 'error')
+                    db.session.rollback()
+                finally:
+                    # Clean up uploaded file
+                    try:
+                        os.remove(filepath)
+                    except:
+                        pass
+            else:
+                flash('Invalid file type', 'error')
+        else:
+            flash('Allowed file types are: csv, json, txt', 'error')
+        
+        return redirect(request.url)
+    
+    return render_template('rule_upload.html')
 
 
 @app.route('/audits')
@@ -1068,6 +1424,10 @@ if __name__ == '__main__':
             db.session.add(admin)
             db.session.commit()
             print('[OK] Default admin created: username="admin" password="Admin@123"')
+
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        _start_alert_reminder_scheduler()
+        print('[OK] Alert reminder scheduler started (checks every %ds)' % REMINDER_CHECK_INTERVAL)
 
     app.run(debug=True)
     
