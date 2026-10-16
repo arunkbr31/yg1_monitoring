@@ -24,9 +24,11 @@ from sqlalchemy import case
 
 load_dotenv()
 
+basedir = os.path.abspath(os.path.dirname(__file__))
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'database.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
@@ -1413,7 +1415,11 @@ def test_email():
         return f"Email failed: {str(e)}", 500
 
 
-if __name__ == '__main__':
+def _initialize_app():
+    """Create tables, run migrations, and seed the default admin user.
+
+    Runs on import so the DB is ready under gunicorn/WSGI too, not only
+    when launched with `python app.py`."""
     with app.app_context():
         db.create_all()
         run_migrations()
@@ -1425,6 +1431,11 @@ if __name__ == '__main__':
             db.session.commit()
             print('[OK] Default admin created: username="admin" password="Admin@123"')
 
+
+_initialize_app()
+
+
+if __name__ == '__main__':
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
         _start_alert_reminder_scheduler()
         print('[OK] Alert reminder scheduler started (checks every %ds)' % REMINDER_CHECK_INTERVAL)
