@@ -26,10 +26,17 @@ load_dotenv()
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
+# Ensure the directory holding the SQLite file exists so the database can
+# be created on first deploy (gunicorn/WSGI imports the app, it does not
+# run `python app.py`).
+db_path = os.path.join(basedir, 'instance', 'database.db')
+os.makedirs(os.path.dirname(db_path), exist_ok=True)
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'instance', 'database.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
@@ -314,6 +321,17 @@ def run_migrations():
             with db.engine.begin() as conn:
                 conn.execute(text("ALTER TABLE rule ADD COLUMN file_attachment VARCHAR(200)"))
             print('[OK] Migration: added rule.file_attachment column')
+
+    # Ensure the ygct_plant* columns exist (added in a later schema version).
+    if 'audit' in inspector.get_table_names():
+        audit_cols = {c['name'] for c in inspector.get_columns('audit')}
+        for plant_col in ('ygct_plant1', 'ygct_plant2', 'ygct_plant3'):
+            if plant_col not in audit_cols:
+                with db.engine.begin() as conn:
+                    conn.execute(text(
+                        f"ALTER TABLE audit ADD COLUMN {plant_col} VARCHAR(100) DEFAULT ''"
+                    ))
+                print(f'[OK] Migration: added audit.{plant_col} column')
 
 
 def get_status_counts():
