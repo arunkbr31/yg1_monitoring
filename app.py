@@ -407,13 +407,9 @@ def login():
             flash('Please enter both ID and password.', 'error')
             return render_template('login.html')
 
-        if user_id != 'arun123' or password != '2av12me003':
-            flash('Invalid ID or password.', 'error')
-            return render_template('login.html')
-
         user = User.query.filter_by(username=user_id).first()
-        if not user:
-            flash('No user account found. Contact administrator.', 'error')
+        if not user or not user.check_password(password):
+            flash('Invalid ID or password.', 'error')
             return render_template('login.html')
 
         if not user.is_active:
