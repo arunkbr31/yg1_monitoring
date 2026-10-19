@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}HOD Audit | YG1 Monitoring{% endblock %}
+{% block content %}
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="badge"><img src="{{ url_for('static', filename='images/yg1_images.png') }}" alt="YG1 Logo"></div>
+            <div>
+                <h2>YG1 Monitor</h2>
+                <small>Rules & Discipline</small>
+            </div>
+        </div>
+        <nav>
+            <div class="nav-label">Main</div>
+            <div class="nav-group open">
+                <button type="button" class="nav-parent active" aria-expanded="true" aria-haspopup="true">
+                    <span class="icon">📊</span> <span>5S Audit</span> <span class="caret">▾</span>
+                </button>
+                <div class="nav-submenu">
+                    <a href="{{ url_for('hod_audit') }}" class="active"><span class="icon">🗂️</span> <span>HOD Audit</span></a>
+                    <a href="{{ url_for('five_s_audit') }}"><span class="icon">✅</span> <span>5S Audit</span></a>
+                </div>
+            </div>
+            <a href="{{ url_for('audits') }}"><span class="icon">📍</span> <span>Audits</span></a>
+            <a href="{{ url_for('hod_summary') }}"><span class="icon">📋</span> <span>HOD Summary</span></a>
+            <a href="{{ url_for('rules') }}"><span class="icon">📋</span> <span>Rules</span></a>
+            <a href="{{ url_for('alerts') }}"><span class="icon">🔔</span> <span>Alerts</span></a>
+            <a href="{{ url_for('mail_logs') }}"><span class="icon">📧</span> <span>Mail Logs</span></a>
+        </nav>
+        <div class="user-box">
+            <a href="{{ url_for('logout') }}" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; font-size:14px; color:#fca5a5; transition:background .2s;">
+                <span class="icon">🚪</span> <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1>HOD Audit</h1>
+                <p>Non-conformity audit monitoring overview</p>
+            </div>
+            <div class="actions">
+                <a href="{{ url_for('audits') }}" class="btn btn-primary">+ New Audit</a>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">
+                    <span class="flash-icon">{% if category == 'success' %}✓{% elif category == 'error' %}✕{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}</span>
+                    <span class="flash-text">{{ message }}</span>
+                    <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">Total Observations</div>
+                <div class="value">{{ counts.total }}</div>
+                <div class="sub">All records</div>
+            </div>
+            <div class="stat-card amber">
+                <div class="label">Total Open</div>
+                <div class="value">{{ counts.open }}</div>
+                <div class="sub">Pending action</div>
+            </div>
+            <div class="stat-card blue">
+                <div class="label">Total Closed</div>
+                <div class="value">{{ counts.closed }}</div>
+                <div class="sub">Resolved</div>
+            </div>
+        </div>
+
+         <div class="charts-grid">
+            <div class="chart-box">
+                <h3>📅 5S Non-Conformity Status - Plant1</h3>
+                <canvas id="zoneChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>📅 5S Non-Conformity Status - Plant2</h3>
+                <canvas id="zoneChart2"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>📅 5S Non-Conformity Status - Plant3</h3>
+                <canvas id="zoneChart3"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>📈 Current Year Trend</h3>
+                <canvas id="yearlyChart"></canvas>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📍 Recent Audits</h3>
+            {% if audits %}
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Audit Date</th>
+                            <th>Plants</th>
+                            <th>NC Category</th>
+                            <th>Description</th>
+                            <th>HOD</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in audits[:10] %}
+                        <tr>
+                            <td data-label="Audit Date">{{ a.audit_date.strftime('%d %b %Y') }}</td>
+                            <td data-label="Plants">
+                                {% if a.ygct_plant1 %}<span class="badge badge-plant1">{{ a.ygct_plant1 }}</span> {% endif %}
+                                {% if a.ygct_plant2 %}<span class="badge badge-plant2">{{ a.ygct_plant2 }}</span> {% endif %}
+                                {% if a.ygct_plant3 %}<span class="badge badge-plant3">{{ a.ygct_plant3 }}</span> {% endif %}
+                            </td>
+                            <td data-label="NC Category">{{ a.nc_category }}</td>
+                            <td data-label="Description">{{ a.description[:50] }}{% if a.description|length > 50 %}...{% endif %}</td>
+                            <td data-label="HOD">{{ a.responsible_hod }}</td>
+                            <td data-label="Status">
+                                {% if a.status == 'open' %}
+                                <span class="badge badge-open">Open</span>
+                                {% else %}
+                                <span class="badge badge-closed">Closed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="icon">📍</div>
+                <p>No audits recorded yet. <a href="{{ url_for('audits') }}" style="color:var(--primary); font-weight:600;">Add your first audit</a></p>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+YG1.onReady(function() {
+    fetch('{{ url_for("charts_data") }}')
+        .then(res => res.json())
+        .then(data => {
+            const createPlantChart = function(canvasId, stats) {
+                const labels = stats.map(z => z.hod);
+                new Chart(document.getElementById(canvasId), {
+                    type: 'bar',
+                    plugins: [{
+                        id: 'closedPct',
+                        afterDatasetsDraw(chart) {
+                            const ctx = chart.ctx;
+                            const meta = chart.getDatasetMeta(2);
+                            meta.data.forEach((bar, i) => {
+                                const s = stats[i];
+                                const t = s.total || 0;
+                                const c = t ? (s.closed / t * 100).toFixed(0) : 0;
+                                ctx.fillStyle = '#16a34a';
+                                ctx.font = 'bold 11px sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.fillText(c + '%', bar.x, bar.y - 4);
+                            });
+                        }
+                    }],
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Total Observations',
+                                data: stats.map(z => z.total),
+                                backgroundColor: '#1e3a8a',
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Open',
+                                data: stats.map(z => z.open),
+                                backgroundColor: '#dc2626',
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Closed',
+                                data: stats.map(z => z.closed),
+                                backgroundColor: '#16a34a',
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0 }, stacked: true },
+                            x: { stacked: true }
+                        },
+                         plugins: {
+                             legend: { position: 'bottom' },
+                             tooltip: {
+                                 mode: 'index',
+                                 intersect: false
+                             }
+                         }
+                    }
+                });
+            };
+
+            createPlantChart('zoneChart', data.plant1_stats);
+            createPlantChart('zoneChart2', data.plant2_stats);
+            createPlantChart('zoneChart3', data.plant3_stats);
+
+            const monthlyTrend = data.monthly_stats;
+            const monthLabels = monthlyTrend.map(m => m.month);
+            const monthTotal = monthlyTrend.map(m => m.total);
+            const monthOpen = monthlyTrend.map(m => m.open);
+            const monthClosed = monthlyTrend.map(m => m.closed);
+
+            new Chart(document.getElementById('yearlyChart'), {
+                type: 'bar',
+                data: {
+                    labels: monthLabels,
+                    datasets: [
+                        {
+                            label: 'Total Observations',
+                            data: monthTotal,
+                            backgroundColor: '#1e3a8a',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Open',
+                            data: monthOpen,
+                            backgroundColor: '#dc2626',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Closed',
+                            data: monthClosed,
+                            backgroundColor: '#16a34a',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { precision: 0 } }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+        })
+        .catch(err => console.error('Chart data error:', err));
+});
+</script>
+{% endblock %}

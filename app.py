@@ -56,9 +56,24 @@ PLANTS = ['Plant 1', 'Plant 2', 'Plant 3']
 ZONES = [f'Zone {i}' for i in range(1, 21)]
 
 # Zonal leader names can be replaced here once the final list is confirmed.
-ZONAL_LEADERS = [f'Zonal Leader {i}' for i in range(1, 11)]
+ZONAL_LEADERS = [
+    'Mr. Jigar Paramar',
+    'Mr. Srikanth S',
+    'mr vishwanth shetty',
+    'mr. jinesh R',
+    'Mr. vijay murthy',
+    'Mr. pavankumar',
+    'Mr.Avinash p',
+    'Mr.Ajay&Mr.Reguram',
+    'Mr. Vijay Moorthy',
+    'Mr.shethuraman',
+    'mr.surendra',
+    'Mr.Rajendra',
+]
 
 STATUS_OPTIONS = ['open', 'closed']
+
+AUDIT_TYPES = ['5S Audit', 'HOD Audit']
 
 
 def allowed_file(filename):
@@ -333,11 +348,22 @@ def run_migrations():
                     ))
                 print(f'[OK] Migration: added audit.{plant_col} column')
 
+    # Ensure the audit_type column exists (HOD Audit / 5S Audit sub-types).
+    if 'audit' in inspector.get_table_names():
+        audit_cols = {c['name'] for c in inspector.get_columns('audit')}
+        if 'audit_type' not in audit_cols:
+            with db.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE audit ADD COLUMN audit_type VARCHAR(20) DEFAULT '5S Audit'"))
+            print('[OK] Migration: added audit.audit_type column')
 
-def get_status_counts():
-    total = Audit.query.count()
-    open_count = Audit.query.filter_by(status='open').count()
-    closed_count = Audit.query.filter_by(status='closed').count()
+
+def get_status_counts(audit_type=None):
+    query = Audit.query
+    if audit_type:
+        query = query.filter(Audit.audit_type == audit_type)
+    total = query.count()
+    open_count = query.filter_by(status='open').count()
+    closed_count = query.filter_by(status='closed').count()
     return {
         'total': total,
         'open': open_count,
@@ -345,7 +371,7 @@ def get_status_counts():
     }
 
 
-def get_alert_counts():
+def get_alert_counts(audit_type=None):
     """Pending alert counts for the dashboard.
 
     `open`     -> alerts still pending (not acknowledged)
@@ -354,6 +380,10 @@ def get_alert_counts():
     """
     cutoff = datetime.utcnow() - timedelta(days=REMINDER_DAYS)
     base = Alert.query
+    if audit_type:
+        base = base.join(Audit, Alert.audit_id == Audit.id).filter(
+            Audit.audit_type == audit_type
+        )
     open_count = base.filter(Alert.acknowledged.is_(False)).count()
     overdue_count = base.filter(
         Alert.acknowledged.is_(False),
@@ -448,6 +478,7 @@ def dashboard():
     audits = Audit.query.order_by(Audit.created_at.desc()).limit(10).all()
     alerts = Alert.query.order_by(Alert.sent_at.desc()).limit(10).all()
     counts = get_status_counts()
+    audit_type = request.args.get('audit_type', '5S Audit')
 
     return render_template(
         'dashboard.html',
@@ -455,6 +486,40 @@ def dashboard():
         alerts=alerts,
         counts=counts,
         alert_counts=get_alert_counts(),
+        audit_types=AUDIT_TYPES,
+        current_audit_type=audit_type,
+        now=datetime.utcnow()
+    )
+
+
+@app.route('/hod-audit')
+@login_required
+def hod_audit():
+    """HOD Audit view - shows the same overview the dashboard shows."""
+    audits = Audit.query.order_by(Audit.created_at.desc()).limit(10).all()
+    alerts = Alert.query.order_by(Alert.sent_at.desc()).limit(10).all()
+    counts = get_status_counts()
+
+    return render_template(
+        'hod_audit.html',
+        audits=audits,
+        alerts=alerts,
+        counts=counts,
+        alert_counts=get_alert_counts(),
+        audit_types=AUDIT_TYPES,
+        current_audit_type='HOD Audit',
+        now=datetime.utcnow()
+    )
+
+
+@app.route('/5s-audit')
+@login_required
+def five_s_audit():
+    """5S Audit view - content will be added later."""
+    return render_template(
+        'five_s_audit.html',
+        audit_types=AUDIT_TYPES,
+        current_audit_type='5S Audit',
         now=datetime.utcnow()
     )
 
@@ -465,13 +530,18 @@ def charts_data():
     counts = get_status_counts()
 
     today = date.today()
+    audit_type = request.args.get('audit_type', '5S Audit')
+    if audit_type not in AUDIT_TYPES:
+        audit_type = '5S Audit'
+
+    base = Audit.query.filter(Audit.audit_type == audit_type)
 
     plant1_results = db.session.query(
         Audit.responsible_hod,
         db.func.count(Audit.id).label('total'),
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
         db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
-    ).filter(Audit.ygct_plant1 != '').group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
+    ).filter(Audit.ygct_plant1 != '').filter(Audit.audit_type == audit_type).group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
 
     plant1_stats = []
     for r in plant1_results:
@@ -487,7 +557,7 @@ def charts_data():
         db.func.count(Audit.id).label('total'),
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
         db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
-    ).filter(Audit.ygct_plant2 != '').group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
+    ).filter(Audit.ygct_plant2 != '').filter(Audit.audit_type == audit_type).group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
 
     plant2_stats = []
     for r in plant2_results:
@@ -503,7 +573,7 @@ def charts_data():
         db.func.count(Audit.id).label('total'),
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
         db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
-    ).filter(Audit.ygct_plant3 != '').group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
+    ).filter(Audit.ygct_plant3 != '').filter(Audit.audit_type == audit_type).group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
 
     plant3_stats = []
     for r in plant3_results:
@@ -520,7 +590,8 @@ def charts_data():
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
         db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
     ).filter(
-        Audit.audit_date >= date(today.year, 1, 1)
+        Audit.audit_date >= date(today.year, 1, 1),
+        Audit.audit_type == audit_type,
     ).group_by('month').order_by('month').all()
 
     monthly_map = {}
@@ -884,6 +955,7 @@ def audits():
         plants=PLANTS,
         zones=ZONES,
         zonal_leaders=ZONAL_LEADERS,
+        audit_types=AUDIT_TYPES,
     )
 
 
@@ -901,6 +973,7 @@ def _audit_export_columns(audit):
         audit.plant or '',
         audit.zone or '',
         audit.zonal_leader or '',
+        audit.audit_type or '',
         audit.nc_category or '',
         audit.description or '',
         audit.action_taken_details or '',
@@ -913,7 +986,7 @@ def _audit_export_columns(audit):
 
 EXPORT_HEADERS = [
     'ID', 'Audit Date', 'Plant', 'Zone', 'Zonal Leader',
-    'NC Category', 'Description of NC', 'Action Taken',
+    'Audit Type', 'NC Category', 'Description of NC', 'Action Taken',
     'Responsible HOD', 'Responsible Email', 'Target Date', 'Status',
 ]
 
@@ -1093,7 +1166,7 @@ def export_audits_excel():
             cell.border = thin_border
             cell.alignment = wrap_alignment
 
-    column_widths = [10, 14, 14, 14, 16, 14, 30, 26, 20, 24, 14, 12]
+    column_widths = [10, 14, 14, 14, 16, 14, 30, 26, 20, 24, 14, 12, 14]
     for col_idx, width in enumerate(column_widths, 1):
         ws.column_dimensions[ws.cell(row=1, column=col_idx).column_letter].width = width
 
@@ -1129,6 +1202,7 @@ def save_audit():
     audit_date = parse_date(request.form.get('audit_date', ''))
     target_date = parse_date(request.form.get('target_date', ''))
     status = request.form.get('status', 'open')
+    audit_type = request.form.get('audit_type', '5S Audit')
 
     errors = []
     if not audit_date:
@@ -1137,10 +1211,12 @@ def save_audit():
     current_plant = audit.plant if audit else ''
     current_zone = audit.zone if audit else ''
     current_leader = audit.zonal_leader if audit else ''
+    current_audit_type = audit.audit_type if audit else '5S Audit'
     dropdowns = (
         ('Plant', plant, PLANTS, current_plant),
         ('Zone', zone, ZONES, current_zone),
         ('Zonal Leader', zonal_leader, ZONAL_LEADERS, current_leader),
+        ('Audit Type', audit_type, AUDIT_TYPES, current_audit_type),
     )
     for label, value, options, current in dropdowns:
         if value not in options and value != current:
@@ -1182,6 +1258,7 @@ def save_audit():
     audit.responsible_email = responsible_email
     audit.target_date = target_date
     audit.status = status
+    audit.audit_type = audit_type
     if before_file and before_file.filename:
         audit.before_image = save_upload(before_file) or audit.before_image
     if after_file and after_file.filename:

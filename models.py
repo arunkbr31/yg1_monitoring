@@ -55,6 +55,7 @@ class Audit(db.Model):
     responsible_email = db.Column(db.String(120), nullable=False)
     target_date = db.Column(db.Date)
     status = db.Column(db.String(20), nullable=False, default='open')
+    audit_type = db.Column(db.String(20), nullable=False, default='5S Audit')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

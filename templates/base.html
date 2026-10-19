@@ -720,6 +720,48 @@
             box-shadow: 0 6px 18px rgba(240,180,0,.34);
         }
         .sidebar nav a .icon { font-size: 18px; width: 22px; text-align: center; }
+        /* ── Sidebar dropdown (5S Audit > HOD Audit / 5S Audit) ── */
+        .sidebar nav .nav-group { margin-bottom: 2px; }
+        .sidebar nav .nav-parent {
+            width: 100%;
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px;
+            border: none;
+            background: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #cbd5e1;
+            text-align: left;
+            transition: background .2s, color .2s, transform .15s;
+        }
+        .sidebar nav .nav-parent:hover { background: rgba(255,255,255,.08); color: white; transform: translateX(2px); }
+        .sidebar nav .nav-parent .icon { font-size: 18px; width: 22px; text-align: center; }
+        .sidebar nav .nav-parent .caret {
+            margin-left: auto;
+            font-size: 11px;
+            line-height: 1;
+            color: #94a3b8;
+            transition: transform .2s;
+        }
+        .sidebar nav .nav-group.open > .nav-parent .caret { transform: rotate(180deg); }
+        .sidebar nav .nav-group.open > .nav-parent { background: rgba(255,255,255,.08); color: white; }
+        .sidebar nav .nav-parent.active {
+            background: linear-gradient(135deg, #f7cf3f, #f0b400);
+            color: #14181f;
+            font-weight: 700;
+            box-shadow: 0 6px 18px rgba(240,180,0,.34);
+        }
+        .sidebar nav .nav-parent.active .caret { color: #14181f; }
+        .sidebar nav .nav-submenu {
+            display: none;
+            margin: 2px 0 6px 0;
+            padding-left: 12px;
+            border-left: 1px solid rgba(255,255,255,.12);
+        }
+        .sidebar nav .nav-group.open > .nav-submenu { display: block; }
+        .sidebar nav .nav-submenu a { padding: 8px 12px; font-size: 13px; }
+        .sidebar nav .nav-submenu a .icon { font-size: 15px; width: 20px; }
         .sidebar .user-box {
             border-top: 1px solid rgba(255,255,255,.1);
             padding-top: 16px;
@@ -989,7 +1031,7 @@
 
         @media (max-width: 1024px) {
             .sidebar { width: 60px; padding: 24px 10px; }
-            .sidebar .brand h2, .sidebar .brand small, .sidebar .nav-label, .sidebar nav a span:not(.icon), .sidebar .user-info { display: none; }
+            .sidebar .brand h2, .sidebar .brand small, .sidebar .nav-label, .sidebar nav a span:not(.icon), .sidebar nav .nav-parent span:not(.icon), .sidebar .user-info { display: none; }
             .sidebar nav a { justify-content: center; }
             .main { margin-left: 60px; padding: 24px 16px; }
             /* the header bleeds to the edges, so its offsets must track .main padding */
@@ -1220,6 +1262,21 @@
                 });
             }
 
+            // Dropdown groups in the sidebar (e.g. 5S Audit > HOD Audit / 5S Audit).
+            function bindNavGroups(root) {
+                root.querySelectorAll('.sidebar nav .nav-group').forEach(group => {
+                    const toggle = group.querySelector('.nav-parent');
+                    if (!toggle || toggle.dataset.groupBound) return;
+                    toggle.dataset.groupBound = '1';
+                    toggle.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const isOpen = group.classList.toggle('open');
+                        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                    });
+                });
+            }
+
             function initPage(root) {
                 root.querySelectorAll('.flash').forEach(f => {
                     if (f.dataset.flashBound) return;
@@ -1230,6 +1287,7 @@
                 });
                 bindConfirm(root);
                 bindSidebarNav(root);
+                bindNavGroups(root);
             }
 
             window.YG1 = { initPage: initPage, removeFlash: removeFlash };
@@ -1339,6 +1397,16 @@
                 } catch (e) { return; }
                 a.classList.toggle('active', match);
             });
+            // Keep the dropdown parent in sync with the highlighted child link.
+            document.querySelectorAll('.sidebar nav .nav-group').forEach(group => {
+                const activeLink = group.querySelector('a.active');
+                const parent = group.querySelector('.nav-parent');
+                group.classList.toggle('open', !!activeLink);
+                if (parent) {
+                    parent.classList.toggle('active', !!activeLink);
+                    parent.setAttribute('aria-expanded', activeLink ? 'true' : 'false');
+                }
+            });
         }
 
         function swap(doc) {
@@ -1431,6 +1499,9 @@
         window.addEventListener('popstate', function() {
             navigate(window.location.href, false);
         });
+
+        // Highlight the current nav item on the first (non-pjax) load too.
+        syncActiveNav();
     })();
     </script>
     <div id="page-scripts">
