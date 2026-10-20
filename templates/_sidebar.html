@@ -1,0 +1,133 @@
+<aside class="sidebar" id="appSidebar">
+    <div class="sidebar-top">
+        <div class="brand">
+            <span class="badge"><img src="{{ url_for('static', filename='images/yg1_images.png') }}" alt="YG1 Logo"></span>
+            <div class="brand-text">
+                <h2>YG1 Monitoring</h2>
+                <small>System</small>
+            </div>
+        </div>
+        <button type="button" class="sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" title="Collapse sidebar">
+            <svg class="chev chev-left" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+            <svg class="chev chev-right" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+    </div>
+
+    <nav class="sidebar-nav">
+        <div class="nav-label">Main Menu</div>
+
+        <div class="nav-group">
+            <button type="button" class="nav-parent" aria-expanded="false" aria-haspopup="true" title="5S Audit">
+                <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg></span>
+                <span class="nav-text">5S Audit</span>
+                <span class="caret"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="nav-submenu">
+                <a href="{{ url_for('hod_audit') }}" class="nav-item" title="HOD Audit">
+                    <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/></svg></span>
+                    <span class="nav-text">HOD Audit</span>
+                </a>
+                <a href="{{ url_for('five_s_audit') }}" class="nav-item" title="5S Audit">
+                    <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+                    <span class="nav-text">5S Audit</span>
+                </a>
+            </div>
+        </div>
+
+        <a href="{{ url_for('audits') }}" class="nav-item" title="Audit">
+            <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h4"/></svg></span>
+            <span class="nav-text">Audit</span>
+        </a>
+
+        <div class="nav-group">
+            <button type="button" class="nav-parent" aria-expanded="false" aria-haspopup="true" title="CAPA">
+                <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/></svg></span>
+                <span class="nav-text">CAPA</span>
+                <span class="caret"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="nav-submenu">
+                <a href="{{ url_for('process_audit') }}" class="nav-item" title="Process Audit">
+                    <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+                    <span class="nav-text">Process Audit</span>
+                </a>
+                <a href="{{ url_for('product_audit') }}" class="nav-item" title="Product Audit">
+                    <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg></span>
+                    <span class="nav-text">Product Audit</span>
+                </a>
+                <a href="{{ url_for('gemba') }}" class="nav-item" title="Gemba">
+                    <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M17 18h1"/><path d="M12 18h1"/><path d="M7 18h1"/></svg></span>
+                    <span class="nav-text">Gemba</span>
+                </a>
+                <a href="{{ url_for('ncr') }}" class="nav-item" title="NCR">
+                    <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+                    <span class="nav-text">NCR</span>
+                </a>
+            </div>
+        </div>
+
+        <a href="{{ url_for('kaizen') }}" class="nav-item" title="Kaizen">
+            <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg></span>
+            <span class="nav-text">Kaizen</span>
+        </a>
+
+        <a href="{{ url_for('suggestions') }}" class="nav-item" title="Suggestion">
+            <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M9 10h6"/><path d="M9 13h4"/></svg></span>
+            <span class="nav-text">Suggestion</span>
+        </a>
+
+        <div class="nav-group">
+            <button type="button" class="nav-parent" aria-expanded="false" aria-haspopup="true" title="Internal Audit">
+                <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>
+                <span class="nav-text">Internal Audit</span>
+                <span class="caret"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+            </button>
+            <div class="nav-submenu">
+                <a href="{{ url_for('ygct_internal_audit') }}" class="nav-item" title="YGCT">
+                    <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/><path d="m9 15 2 2 4-4"/></svg></span>
+                    <span class="nav-text">YGCT</span>
+                </a>
+                <a href="{{ url_for('ygit_internal_audit') }}" class="nav-item" title="YGIT">
+                    <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/><circle cx="11" cy="14.5" r="2.5"/><path d="m13.5 17 1.5 1.5"/></svg></span>
+                    <span class="nav-text">YGIT</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="nav-label">Management</div>
+
+        <a href="{{ url_for('hod_summary') }}" class="nav-item" title="HOD Summary">
+            <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></span>
+            <span class="nav-text">HOD Summary</span>
+        </a>
+
+        <a href="{{ url_for('rules') }}" class="nav-item" title="Rules">
+            <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></svg></span>
+            <span class="nav-text">Rules</span>
+        </a>
+
+        <a href="{{ url_for('alerts') }}" class="nav-item" title="Alerts">
+            <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.27 21a2 2 0 0 0 3.46 0"/><path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33"/></svg></span>
+            <span class="nav-text">Alerts</span>
+        </a>
+
+        <a href="{{ url_for('mail_logs') }}" class="nav-item" title="Mail Logs">
+            <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>
+            <span class="nav-text">Mail Logs</span>
+        </a>
+    </nav>
+
+    <div class="user-box">
+        {% if current_user.is_authenticated %}
+        <div class="user-info">
+            <strong>{{ current_user.username }}</strong>
+            <span>{{ current_user.role|capitalize }}</span>
+        </div>
+        {% endif %}
+        <nav class="sidebar-nav-foot">
+            <a href="{{ url_for('logout') }}" class="nav-item nav-logout" title="Logout">
+                <span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg></span>
+                <span class="nav-text">Logout</span>
+            </a>
+        </nav>
+    </div>
+</aside>

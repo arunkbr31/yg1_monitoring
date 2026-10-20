@@ -427,7 +427,7 @@ def forbidden(e):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('hod_audit'))
 
     if request.method == 'POST':
         user_id = request.form.get('id', '').strip()
@@ -454,7 +454,7 @@ def login():
         next_page = request.args.get('next')
         if next_page and next_page.startswith('/'):
             return redirect(next_page)
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('hod_audit'))
 
     return render_template('login.html')
 
@@ -475,21 +475,8 @@ def logout():
 @app.route('/')
 @login_required
 def dashboard():
-    audits = Audit.query.order_by(Audit.created_at.desc()).limit(10).all()
-    alerts = Alert.query.order_by(Alert.sent_at.desc()).limit(10).all()
-    counts = get_status_counts()
-    audit_type = request.args.get('audit_type', '5S Audit')
-
-    return render_template(
-        'dashboard.html',
-        audits=audits,
-        alerts=alerts,
-        counts=counts,
-        alert_counts=get_alert_counts(),
-        audit_types=AUDIT_TYPES,
-        current_audit_type=audit_type,
-        now=datetime.utcnow()
-    )
+    """The dashboard page was retired - / now forwards to the HOD Audit overview."""
+    return redirect(url_for('hod_audit'))
 
 
 @app.route('/hod-audit')
@@ -522,6 +509,61 @@ def five_s_audit():
         current_audit_type='5S Audit',
         now=datetime.utcnow()
     )
+
+
+@app.route('/process-audit')
+@login_required
+def process_audit():
+    """Process Audit view - content will be added later."""
+    return render_template('process_audit.html', now=datetime.utcnow())
+
+
+@app.route('/product-audit')
+@login_required
+def product_audit():
+    """Product Audit view - content will be added later."""
+    return render_template('product_audit.html', now=datetime.utcnow())
+
+
+@app.route('/gemba')
+@login_required
+def gemba():
+    """Gemba view - content will be added later."""
+    return render_template('gemba.html', now=datetime.utcnow())
+
+
+@app.route('/ncr')
+@login_required
+def ncr():
+    """NCR view - content will be added later."""
+    return render_template('ncr.html', now=datetime.utcnow())
+
+
+@app.route('/kaizen')
+@login_required
+def kaizen():
+    """Kaizen view - content will be added later."""
+    return render_template('kaizen.html', now=datetime.utcnow())
+
+
+@app.route('/suggestions')
+@login_required
+def suggestions():
+    """Suggestions view - content will be added later."""
+    return render_template('suggestions.html', now=datetime.utcnow())
+
+
+@app.route('/internal-audit/ygct')
+@login_required
+def ygct_internal_audit():
+    """YGCT Internal Audit view."""
+    return render_template('ygct_internal_audit.html', now=datetime.utcnow())
+
+@app.route('/internal-audit/ygit')
+@login_required
+def ygit_internal_audit():
+    """YGIT Internal Audit view."""
+    return render_template('ygit_internal_audit.html', now=datetime.utcnow())
 
 
 @app.route('/api/charts')
@@ -1445,7 +1487,7 @@ def acknowledge_alert(alert_id):
         flash('Alert acknowledged.', 'success')
     else:
         flash('Alert not found.', 'error')
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('hod_audit'))
 
 
 @app.route('/alerts/resend/<int:alert_id>', methods=['POST'])

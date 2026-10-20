@@ -2,37 +2,7 @@
 {% block title %}Rules | YG1 Monitoring{% endblock %}
 {% block content %}
 <div class="layout">
-    <aside class="sidebar">
-        <div class="brand">
-            <div class="badge"><img src="{{ url_for('static', filename='images/yg1_images.png') }}" alt="YG1 Logo"></div>
-            <div>
-                <h2>YG1 Monitor</h2>
-                <small>Rules & Discipline</small>
-            </div>
-        </div>
-        <nav>
-            <div class="nav-label">Main</div>
-            <div class="nav-group">
-                <button type="button" class="nav-parent" aria-expanded="false" aria-haspopup="true">
-                    <span class="icon">📊</span> <span>5S Audit</span> <span class="caret">▾</span>
-                </button>
-                <div class="nav-submenu">
-                    <a href="{{ url_for('hod_audit') }}"><span class="icon">🗂️</span> <span>HOD Audit</span></a>
-                    <a href="{{ url_for('five_s_audit') }}"><span class="icon">✅</span> <span>5S Audit</span></a>
-                </div>
-            </div>
-            <a href="{{ url_for('audits') }}"><span class="icon">📍</span> <span>Audits</span></a>
-            <a href="{{ url_for('hod_summary') }}"><span class="icon">📋</span> <span>HOD Summary</span></a>
-            <a href="{{ url_for('rules') }}" class="active"><span class="icon">📋</span> <span>Rules</span></a>
-            <a href="{{ url_for('alerts') }}"><span class="icon">🔔</span> <span>Alerts</span></a>
-            <a href="{{ url_for('mail_logs') }}"><span class="icon">📧</span> <span>Mail Logs</span></a>
-        </nav>
-        <div class="user-box">
-            <a href="{{ url_for('logout') }}" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:8px; font-size:14px; color:#fca5a5; transition:background .2s;">
-                <span class="icon">🚪</span> <span>Logout</span>
-            </a>
-        </div>
-    </aside>
+    {% include "_sidebar.html" %}
 
     <main class="main">
         <div class="page-header">
