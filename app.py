@@ -18,7 +18,7 @@ from flask_login import (
 from dotenv import load_dotenv
 
 from extensions import db
-from models import User, Rule, Audit, Alert, MailLog
+from models import User, Rule, Audit, Alert, MailLog, NCR
 from sqlalchemy import case
 
 
@@ -485,29 +485,76 @@ def hod_audit():
     """HOD Audit view - shows the same overview the dashboard shows."""
     audits = Audit.query.order_by(Audit.created_at.desc()).limit(10).all()
     alerts = Alert.query.order_by(Alert.sent_at.desc()).limit(10).all()
-    counts = get_status_counts()
+    counts = get_status_counts(audit_type='HOD Audit')
 
     return render_template(
         'hod_audit.html',
         audits=audits,
         alerts=alerts,
         counts=counts,
-        alert_counts=get_alert_counts(),
+        alert_counts=get_alert_counts(audit_type='HOD Audit'),
         audit_types=AUDIT_TYPES,
         current_audit_type='HOD Audit',
         now=datetime.utcnow()
     )
 
 
+@app.route('/hod-audit-summary')
+@app.route('/hod-audit/check-sheet')
+@app.route('/hod-audit-summary/')
+@login_required
+def hod_audit_summary():
+    """HOD Audit Summary - shows the full audit record table for HOD audits."""
+    hod_query = request.args.get('hod', '').strip()
+    query = Audit.query.filter(Audit.audit_type == 'HOD Audit').order_by(Audit.created_at.desc())
+    if hod_query:
+        query = query.filter(Audit.responsible_hod.ilike(f'%{hod_query}%'))
+    all_audits = query.all()
+    return render_template(
+        'hod_audit_summary.html',
+        audits=all_audits,
+        plants=PLANTS,
+        zones=ZONES,
+        zonal_leaders=ZONAL_LEADERS,
+        audit_types=AUDIT_TYPES,
+        hod_query=hod_query,
+    )
+
+
 @app.route('/5s-audit')
 @login_required
 def five_s_audit():
-    """5S Audit view - content will be added later."""
+    audits = []
+    alerts = Alert.query.order_by(Alert.sent_at.desc()).limit(10).all()
+    counts = get_status_counts(audit_type='5S Audit')
+
     return render_template(
         'five_s_audit.html',
+        audits=audits,
+        alerts=alerts,
+        counts=counts,
+        alert_counts=get_alert_counts(audit_type='5S Audit'),
         audit_types=AUDIT_TYPES,
         current_audit_type='5S Audit',
         now=datetime.utcnow()
+    )
+
+
+@app.route('/5s-audit-summary')
+@login_required
+def five_s_audit_summary():
+    """5S Audit Summary - shows the full audit record table for 5S audits."""
+    hod_query = request.args.get('hod', '').strip()
+    query = Audit.query.filter(Audit.audit_type == '5S Audit').order_by(Audit.created_at.desc())
+    all_audits = []
+    return render_template(
+        'five_s_audit_summary.html',
+        audits=all_audits,
+        plants=PLANTS,
+        zones=ZONES,
+        zonal_leaders=ZONAL_LEADERS,
+        audit_types=AUDIT_TYPES,
+        hod_query=hod_query,
     )
 
 
@@ -535,8 +582,207 @@ def gemba():
 @app.route('/ncr')
 @login_required
 def ncr():
-    """NCR view - content will be added later."""
-    return render_template('ncr.html', now=datetime.utcnow())
+    """NCR view - shows the inline-editable Non-Conformance Report table."""
+    document_no_query = request.args.get('document_no', '').strip()
+    query = NCR.query.order_by(NCR.created_at.desc())
+    if document_no_query:
+        query = query.filter(NCR.document_no.ilike(f'%{document_no_query}%'))
+    ncrs = query.all()
+    return render_template(
+        'ncr.html',
+        ncrs=ncrs,
+        document_no_query=document_no_query,
+        now=datetime.utcnow(),
+    )
+
+
+@app.route('/ncr/save', methods=['POST'])
+@login_required
+def save_ncr():
+    ncr_id = request.form.get('ncr_id', type=int)
+    ncr = db.session.get(NCR, ncr_id) if ncr_id else None
+    if ncr_id and not ncr:
+        flash('NCR record not found.', 'error')
+        return redirect(url_for('ncr'))
+
+    document_no = request.form.get('document_no', '').strip()
+    date_of_creation = parse_date(request.form.get('date_of_creation', ''))
+    product = request.form.get('product', '').strip()
+    tool_type = request.form.get('tool_type', '').strip()
+    issued_by = request.form.get('issued_by', '').strip()
+    issued_dept = request.form.get('issued_dept', '').strip()
+    wo_no = request.form.get('wo_no', '').strip()
+    edp_no = request.form.get('edp_no', '').strip()
+    date_of_submission = parse_date(request.form.get('date_of_submission', ''))
+    as_on_date_days = request.form.get('as_on_date_days', '').strip()
+    four_m = request.form.get('four_m', '').strip()
+    type_of_defect = request.form.get('type_of_defect', '').strip()
+    defect_reason = request.form.get('defect_reason', '').strip()
+    wo_quantity = request.form.get('wo_quantity', '').strip()
+    problem_quantity = request.form.get('problem_quantity', '').strip()
+    problem_rate = request.form.get('problem_rate', '').strip()
+    process_generated = request.form.get('process_generated', '').strip()
+    operator = request.form.get('operator', '').strip()
+    processing_result = request.form.get('processing_result', '').strip()
+    final_result = request.form.get('final_result', '').strip()
+    status = request.form.get('status', 'open')
+    reminder_1 = request.form.get('reminder_1', '').strip()
+    completed_date = parse_date(request.form.get('completed_date', ''))
+
+    errors = []
+    if not document_no:
+        errors.append('Document No is required.')
+    if not date_of_creation:
+        errors.append('Date of Creation is required.')
+    if not product:
+        errors.append('Product is required.')
+    if not tool_type:
+        errors.append('Tool Type is required.')
+    if not issued_by:
+        errors.append('Issued By is required.')
+    if not issued_dept:
+        errors.append('Issued Dept is required.')
+    if not wo_no:
+        errors.append('WO No is required.')
+    if not edp_no:
+        errors.append('EDP No is required.')
+    if not date_of_submission:
+        errors.append('Date of Submission is required.')
+    if not four_m:
+        errors.append('4M is required.')
+    if not type_of_defect:
+        errors.append('Type of Defect is required.')
+    if not defect_reason:
+        errors.append('Defect Reason is required.')
+    if not operator:
+        errors.append('Operator is required.')
+    if not processing_result:
+        errors.append('Processing Result is required.')
+    if not final_result:
+        errors.append('Final Result is required.')
+    if status not in STATUS_OPTIONS:
+        errors.append('Please select a valid Status.')
+
+    if errors:
+        for e in errors:
+            flash(e, 'error')
+        return redirect(url_for('ncr'))
+
+    try:
+        as_on_days_val = int(as_on_date_days) if as_on_date_days else 0
+    except ValueError:
+        as_on_days_val = 0
+    try:
+        wo_qty_val = int(wo_quantity) if wo_quantity else 0
+    except ValueError:
+        wo_qty_val = 0
+    try:
+        prob_qty_val = int(problem_quantity) if problem_quantity else 0
+    except ValueError:
+        prob_qty_val = 0
+    try:
+        prob_rate_val = float(problem_rate) if problem_rate else 0.0
+    except ValueError:
+        prob_rate_val = 0.0
+
+    if not ncr:
+        ncr = NCR(
+            document_no=document_no,
+            date_of_creation=date_of_creation,
+            product=product,
+            tool_type=tool_type,
+            issued_by=issued_by,
+            issued_dept=issued_dept,
+            wo_no=wo_no,
+            edp_no=edp_no,
+            date_of_submission=date_of_submission,
+            as_on_date_days=as_on_days_val,
+            four_m=four_m,
+            type_of_defect=type_of_defect,
+            defect_reason=defect_reason,
+            wo_quantity=wo_qty_val,
+            problem_quantity=prob_qty_val,
+            problem_rate=prob_rate_val,
+            process_generated=process_generated,
+            operator=operator,
+            processing_result=processing_result,
+            final_result=final_result,
+            status=status,
+            reminder_1=reminder_1,
+            completed_date=completed_date,
+        )
+        db.session.add(ncr)
+    else:
+        ncr.document_no = document_no
+        ncr.date_of_creation = date_of_creation
+        ncr.product = product
+        ncr.tool_type = tool_type
+        ncr.issued_by = issued_by
+        ncr.issued_dept = issued_dept
+        ncr.wo_no = wo_no
+        ncr.edp_no = edp_no
+        ncr.date_of_submission = date_of_submission
+        ncr.as_on_date_days = as_on_days_val
+        ncr.four_m = four_m
+        ncr.type_of_defect = type_of_defect
+        ncr.defect_reason = defect_reason
+        ncr.wo_quantity = wo_qty_val
+        ncr.problem_quantity = prob_qty_val
+        ncr.problem_rate = prob_rate_val
+        ncr.process_generated = process_generated
+        ncr.operator = operator
+        ncr.processing_result = processing_result
+        ncr.final_result = final_result
+        ncr.status = status
+        ncr.reminder_1 = reminder_1
+        ncr.completed_date = completed_date
+        ncr.updated_at = datetime.utcnow()
+
+    db.session.commit()
+    flash('NCR record saved successfully!', 'success')
+    return redirect(url_for('ncr'))
+
+
+@app.route('/ncr/close/<int:ncr_id>', methods=['POST'])
+@login_required
+def close_ncr(ncr_id):
+    ncr = db.session.get(NCR, ncr_id)
+    if ncr:
+        ncr.status = 'closed'
+        ncr.completed_date = datetime.utcnow().date()
+        ncr.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash('NCR record marked as closed.', 'success')
+    else:
+        flash('NCR record not found.', 'error')
+    return redirect(url_for('ncr'))
+
+
+@app.route('/ncr/reopen/<int:ncr_id>', methods=['POST'])
+@login_required
+def reopen_ncr(ncr_id):
+    ncr = db.session.get(NCR, ncr_id)
+    if ncr:
+        ncr.status = 'open'
+        ncr.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash('NCR record reopened.', 'info')
+    else:
+        flash('NCR record not found.', 'error')
+    return redirect(url_for('ncr'))
+
+
+@app.route('/ncr/delete/<int:ncr_id>', methods=['POST'])
+@login_required
+def delete_ncr(ncr_id):
+    ncr = db.session.get(NCR, ncr_id)
+    if ncr:
+        db.session.delete(ncr)
+        db.session.commit()
+        flash('NCR record deleted.', 'info')
+    else:
+        flash('NCR record not found.', 'error')
+    return redirect(url_for('ncr'))
 
 
 @app.route('/kaizen')
@@ -569,12 +815,10 @@ def ygit_internal_audit():
 @app.route('/api/charts')
 @login_required
 def charts_data():
-    counts = get_status_counts()
-
-    today = date.today()
     audit_type = request.args.get('audit_type', '5S Audit')
     if audit_type not in AUDIT_TYPES:
         audit_type = '5S Audit'
+    counts = get_status_counts(audit_type=audit_type)
 
     base = Audit.query.filter(Audit.audit_type == audit_type)
 
@@ -626,6 +870,7 @@ def charts_data():
             'closed': r.closed or 0
         })
 
+    today = date.today()
     monthly_results = db.session.query(
         db.func.strftime('%Y-%m', Audit.audit_date).label('month'),
         db.func.count(Audit.id).label('total'),
@@ -986,11 +1231,7 @@ def upload_rules():
 @app.route('/audits')
 @login_required
 def audits():
-    hod_query = request.args.get('hod', '').strip()
-    query = Audit.query.order_by(Audit.created_at.desc())
-    if hod_query:
-        query = query.filter(Audit.responsible_hod.ilike(f'%{hod_query}%'))
-    all_audits = query.all()
+    all_audits = []
     return render_template(
         'audits.html',
         audits=all_audits,
@@ -1227,9 +1468,12 @@ def export_audits_excel():
 @app.route('/audits/save', methods=['POST'])
 @login_required
 def save_audit():
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     audit_id = request.form.get('audit_id', type=int)
     audit = db.session.get(Audit, audit_id) if audit_id else None
     if audit_id and not audit:
+        if is_ajax:
+            return jsonify({'ok': False, 'message': 'Audit record not found.'}), 404
         flash('Audit record not found.', 'error')
         return redirect(url_for('audits'))
 
@@ -1276,6 +1520,8 @@ def save_audit():
         errors.append('Please select a valid Status.')
 
     if errors:
+        if is_ajax:
+            return jsonify({'ok': False, 'errors': errors}), 400
         for e in errors:
             flash(e, 'error')
         return redirect(url_for('audits'))
@@ -1313,11 +1559,14 @@ def save_audit():
 
     if not audit_id:
         create_audit_alert(audit)
-        flash('Audit record created successfully!', 'success')
+        msg = 'Audit record saved successfully!'
     else:
-        flash('Audit record updated successfully!', 'success')
+        msg = 'Audit record updated successfully!'
 
-    return redirect(url_for('audits'))
+    if is_ajax:
+        return jsonify({'ok': True, 'message': msg, 'id': audit.id})
+    flash(msg, 'success')
+    return redirect(url_for('hod_audit_summary') if audit_type == 'HOD Audit' else url_for('five_s_audit_summary'))
 
 
 @app.route('/audits/add')

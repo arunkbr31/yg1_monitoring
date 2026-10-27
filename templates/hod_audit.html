@@ -11,7 +11,7 @@
                 <p>Non-conformity audit monitoring overview</p>
             </div>
             <div class="actions">
-                <a href="{{ url_for('audits') }}" class="btn btn-primary">+ New Audit</a>
+                <a href="{{ url_for('hod_audit_summary') }}" class="btn btn-primary">+ New Audit</a>
             </div>
         </div>
 
@@ -49,15 +49,15 @@
 
          <div class="charts-grid">
             <div class="chart-box">
-                <h3>📅 5S Non-Conformity Status - Plant1</h3>
+                <h3>📅 HOD Audit Non-Conformity Status - Plant1</h3>
                 <canvas id="zoneChart"></canvas>
             </div>
             <div class="chart-box">
-                <h3>📅 5S Non-Conformity Status - Plant2</h3>
+                <h3>📅 HOD Audit Non-Conformity Status - Plant2</h3>
                 <canvas id="zoneChart2"></canvas>
             </div>
             <div class="chart-box">
-                <h3>📅 5S Non-Conformity Status - Plant3</h3>
+                <h3>📅 HOD Audit Non-Conformity Status - Plant3</h3>
                 <canvas id="zoneChart3"></canvas>
             </div>
             <div class="chart-box">
@@ -119,7 +119,7 @@
 {% block scripts %}
 <script>
 YG1.onReady(function() {
-    fetch('{{ url_for("charts_data") }}')
+    fetch('{{ url_for("charts_data") }}?audit_type=HOD Audit')
         .then(res => res.json())
         .then(data => {
             const createPlantChart = function(canvasId, stats) {

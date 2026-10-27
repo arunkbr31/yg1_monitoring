@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}NCR | YG1 Monitoring{% endblock %}
+{% block body_class %}ncr-page{% endblock %}
 {% block content %}
 <div class="layout">
     {% include "_sidebar.html" %}
@@ -26,12 +27,134 @@
             {% endif %}
         {% endwith %}
 
-        <div class="card">
-            <div class="empty-state">
-                <div class="icon">📋</div>
-                <p>NCR data will be shown here.</p>
+        <div class="card" style="display:flex; flex-direction:column; height:calc(100vh - 160px);">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; flex-shrink:0;">
+                <h3 style="margin:0;">All NCR Records</h3>
+                <form method="GET" action="{{ url_for('ncr') }}" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <label for="document_no_search" style="font-size:13px; font-weight:600; color:var(--text-light);">Search Document No:</label>
+                    <input type="text" id="document_no_search" name="document_no" placeholder="e.g., NCR-001" value="{{ document_no_query or '' }}" style="padding:8px 12px; border:1.5px solid var(--gray-border); border-radius:8px; font-size:13px; font-family:inherit; min-width:220px;">
+                    <button type="submit" class="btn btn-primary btn-sm">Search</button>
+                    {% if document_no_query %}
+                    <a href="{{ url_for('ncr') }}" class="btn btn-outline btn-sm">Clear</a>
+                    {% endif %}
+                </form>
             </div>
+            <div class="table-scroll" style="flex:1; min-height:0;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Document No</th>
+                            <th>Date of Creation</th>
+                            <th>Product</th>
+                            <th>Tool Type</th>
+                            <th>Issued By</th>
+                            <th>Issued Dept</th>
+                            <th>WO No</th>
+                            <th>EDP No</th>
+                            <th>Date of Submission</th>
+                            <th>As on Date (Days)</th>
+                            <th>4M</th>
+                            <th>Type of Defect</th>
+                            <th>Defect Reason</th>
+                            <th>WO Quantity (pcs)</th>
+                            <th>Problem Quantity (pcs)</th>
+                            <th>Problem Rate (%)</th>
+                            <th>Process Generated</th>
+                            <th>Operator</th>
+                            <th>Processing Result</th>
+                            <th>Final Result</th>
+                            <th>Status</th>
+                            <th>Reminder-1</th>
+                            <th>Completed Date</th>
+                            <th>Save</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="new-ncr-row">
+                            <td><input type="text" form="ncr-new" name="document_no" class="cell-input" placeholder="Doc No"></td>
+                            <td><input type="text" form="ncr-new" name="date_of_creation" class="cell-input date-input" placeholder="DD-MM-YYYY" autocomplete="off"></td>
+                            <td><input type="text" form="ncr-new" name="product" class="cell-input" placeholder="Product"></td>
+                            <td><input type="text" form="ncr-new" name="tool_type" class="cell-input" placeholder="Tool Type"></td>
+                            <td><input type="text" form="ncr-new" name="issued_by" class="cell-input" placeholder="Issued By"></td>
+                            <td><input type="text" form="ncr-new" name="issued_dept" class="cell-input" placeholder="Issued Dept"></td>
+                            <td><input type="text" form="ncr-new" name="wo_no" class="cell-input" placeholder="WO No"></td>
+                            <td><input type="text" form="ncr-new" name="edp_no" class="cell-input" placeholder="EDP No"></td>
+                            <td><input type="text" form="ncr-new" name="date_of_submission" class="cell-input date-input" placeholder="DD-MM-YYYY" autocomplete="off"></td>
+                            <td><input type="number" form="ncr-new" name="as_on_date_days" class="cell-input" placeholder="0"></td>
+                            <td><input type="text" form="ncr-new" name="four_m" class="cell-input" placeholder="4M"></td>
+                            <td><input type="text" form="ncr-new" name="type_of_defect" class="cell-input" placeholder="Type"></td>
+                            <td><input type="text" form="ncr-new" name="defect_reason" class="cell-input" placeholder="Reason"></td>
+                            <td><input type="number" form="ncr-new" name="wo_quantity" class="cell-input" placeholder="0"></td>
+                            <td><input type="number" form="ncr-new" name="problem_quantity" class="cell-input" placeholder="0"></td>
+                            <td><input type="number" step="0.01" form="ncr-new" name="problem_rate" class="cell-input" placeholder="0"></td>
+                            <td><input type="text" form="ncr-new" name="process_generated" class="cell-input" placeholder="Process"></td>
+                            <td><input type="text" form="ncr-new" name="operator" class="cell-input" placeholder="Operator"></td>
+                            <td><input type="text" form="ncr-new" name="processing_result" class="cell-input" placeholder="Processing"></td>
+                            <td><input type="text" form="ncr-new" name="final_result" class="cell-input" placeholder="Final"></td>
+                            <td>
+                                <select form="ncr-new" name="status" class="cell-input">
+                                    <option value="open">Open</option>
+                                    <option value="closed">Closed</option>
+                                </select>
+                            </td>
+                            <td><input type="text" form="ncr-new" name="reminder_1" class="cell-input" placeholder="Reminder"></td>
+                            <td><input type="text" form="ncr-new" name="completed_date" class="cell-input date-input" placeholder="DD-MM-YYYY" autocomplete="off"></td>
+                            <td><button type="submit" form="ncr-new" class="btn btn-primary btn-sm">Save</button></td>
+                        </tr>
+                        {% for n in ncrs %}
+                        <tr>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="document_no" class="cell-input" value="{{ n.document_no }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="date_of_creation" class="cell-input date-input" value="{{ n.date_of_creation.strftime('%d-%m-%Y') if n.date_of_creation else '' }}" autocomplete="off"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="product" class="cell-input" value="{{ n.product }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="tool_type" class="cell-input" value="{{ n.tool_type }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="issued_by" class="cell-input" value="{{ n.issued_by }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="issued_dept" class="cell-input" value="{{ n.issued_dept }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="wo_no" class="cell-input" value="{{ n.wo_no }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="edp_no" class="cell-input" value="{{ n.edp_no }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="date_of_submission" class="cell-input date-input" value="{{ n.date_of_submission.strftime('%d-%m-%Y') if n.date_of_submission else '' }}" autocomplete="off"></td>
+                            <td><input type="number" form="ncr-{{ n.id }}" name="as_on_date_days" class="cell-input" value="{{ n.as_on_date_days }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="four_m" class="cell-input" value="{{ n.four_m }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="type_of_defect" class="cell-input" value="{{ n.type_of_defect }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="defect_reason" class="cell-input" value="{{ n.defect_reason }}"></td>
+                            <td><input type="number" form="ncr-{{ n.id }}" name="wo_quantity" class="cell-input" value="{{ n.wo_quantity }}"></td>
+                            <td><input type="number" form="ncr-{{ n.id }}" name="problem_quantity" class="cell-input" value="{{ n.problem_quantity }}"></td>
+                            <td><input type="number" step="0.01" form="ncr-{{ n.id }}" name="problem_rate" class="cell-input" value="{{ n.problem_rate }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="process_generated" class="cell-input" value="{{ n.process_generated }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="operator" class="cell-input" value="{{ n.operator }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="processing_result" class="cell-input" value="{{ n.processing_result }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="final_result" class="cell-input" value="{{ n.final_result }}"></td>
+                            <td>
+                                <select form="ncr-{{ n.id }}" name="status" class="cell-input">
+                                    <option value="open" {% if n.status == 'open' %}selected{% endif %}>Open</option>
+                                    <option value="closed" {% if n.status == 'closed' %}selected{% endif %}>Closed</option>
+                                </select>
+                            </td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="reminder_1" class="cell-input" value="{{ n.reminder_1 or '' }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="completed_date" class="cell-input date-input" value="{{ n.completed_date.strftime('%d-%m-%Y') if n.completed_date else '' }}" autocomplete="off"></td>
+                            <td><button type="submit" form="ncr-{{ n.id }}" class="btn btn-primary btn-sm">Save</button></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <form id="ncr-new" method="POST" action="{{ url_for('save_ncr') }}"></form>
+            {% for n in ncrs %}
+            <form id="ncr-{{ n.id }}" method="POST" action="{{ url_for('save_ncr') }}">
+                <input type="hidden" name="ncr_id" value="{{ n.id }}">
+            </form>
+            {% endfor %}
         </div>
     </main>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+YG1.onReady(function() {
+    flatpickr('.date-input', {
+        dateFormat: 'd-m-Y',
+        allowInput: true
+    });
+});
+</script>
 {% endblock %}

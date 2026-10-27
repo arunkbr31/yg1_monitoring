@@ -104,3 +104,35 @@ class MailLog(db.Model):
 
     def __repr__(self):
         return f'<MailLog {self.id} - {self.recipient} - {self.status}>'
+
+
+class NCR(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    document_no = db.Column(db.String(50), nullable=False, unique=True)
+    date_of_creation = db.Column(db.Date, nullable=False)
+    product = db.Column(db.String(100), nullable=False)
+    tool_type = db.Column(db.String(100), nullable=False)
+    issued_by = db.Column(db.String(100), nullable=False)
+    issued_dept = db.Column(db.String(100), nullable=False)
+    wo_no = db.Column(db.String(50), nullable=False)
+    edp_no = db.Column(db.String(50), nullable=False)
+    date_of_submission = db.Column(db.Date, nullable=False)
+    as_on_date_days = db.Column(db.Integer, nullable=False, default=0)
+    four_m = db.Column(db.String(200), nullable=False)
+    type_of_defect = db.Column(db.String(100), nullable=False)
+    defect_reason = db.Column(db.Text, nullable=False)
+    wo_quantity = db.Column(db.Integer, nullable=False, default=0)
+    problem_quantity = db.Column(db.Integer, nullable=False, default=0)
+    problem_rate = db.Column(db.Float, nullable=False, default=0.0)
+    process_generated = db.Column(db.String(200), nullable=False)
+    operator = db.Column(db.String(100), nullable=False)
+    processing_result = db.Column(db.Text, nullable=False)
+    final_result = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='open')
+    reminder_1 = db.Column(db.String(200))
+    completed_date = db.Column(db.Date)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<NCR {self.id} - {self.document_no}>'

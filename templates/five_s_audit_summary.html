@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}5S Audit Summary | YG1 Monitoring{% endblock %}
+{% block body_class %}five-s-audit-summary-page{% endblock %}
+{% block content %}
+<div class="layout">
+    {% include "_sidebar.html" %}
+
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1>5S Audit Summary</h1>
+                <p>Full audit record table for 5S audits</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <p style="margin:0; color:var(--text-light);">5S audit data will be shown here.</p>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+YG1.onReady(function() {
+    flatpickr('.date-input', {
+        dateFormat: 'd-m-Y',
+        allowInput: true
+    });
+});
+</script>
+{% endblock %}
