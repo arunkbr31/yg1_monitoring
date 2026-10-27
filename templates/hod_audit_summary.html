@@ -30,15 +30,18 @@
         <div class="card" style="display:flex; flex-direction:column; height:calc(100vh - 160px);">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; flex-shrink:0;">
                 <h3 style="margin:0;">HOD Audit Records</h3>
+
                 <form method="GET" action="{{ url_for('hod_audit_summary') }}" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                     <label for="hod_search" style="font-size:13px; font-weight:600; color:var(--text-light);">Search Responsible HOD:</label>
                     <input type="text" id="hod_search" name="hod" placeholder="e.g., John Doe" value="{{ hod_query }}" style="padding:8px 12px; border:1.5px solid var(--gray-border); border-radius:8px; font-size:13px; font-family:inherit; min-width:220px;">
                     <button type="submit" class="btn btn-primary btn-sm">Search</button>
+
                     {% if hod_query %}
                     <a href="{{ url_for('hod_audit_summary') }}" class="btn btn-outline btn-sm">Clear</a>
                     {% endif %}
                 </form>
             </div>
+
             <div class="table-scroll" style="flex:1; min-height:0;">
                 <table>
                     <thead>
@@ -59,109 +62,205 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
+
                     <tbody>
-                        <!-- New record entry row inside the table -->
+                        <!-- New record entry row -->
                         <tr class="new-audit-row" id="new-audit-row">
-                            <td data-label="Audit Date"><input type="text" form="audit-new" name="audit_date" id="f-audit_date" class="cell-input date-input" placeholder="DD-MM-YYYY" autocomplete="off"></td>
+
+                            <td data-label="Audit Date">
+                                <input type="text" form="audit-new" name="audit_date" id="f-audit_date" class="cell-input date-input" placeholder="DD-MM-YYYY" autocomplete="off">
+                            </td>
+
                             <td data-label="Plant">
                                 <select form="audit-new" name="plant" id="f-plant" class="cell-input">
                                     <option value="">-- Select --</option>
-                                    {% for p in plants %}<option value="{{ p }}">{{ p }}</option>{% endfor %}
+                                    {% for p in plants %}
+                                    <option value="{{ p }}">{{ p }}</option>
+                                    {% endfor %}
                                 </select>
                             </td>
+
                             <td data-label="Zone">
                                 <select form="audit-new" name="zone" id="f-zone" class="cell-input">
                                     <option value="">-- Select --</option>
-                                    {% for z in zones %}<option value="{{ z }}">{{ z }}</option>{% endfor %}
+                                    {% for z in zones %}
+                                    <option value="{{ z }}">{{ z }}</option>
+                                    {% endfor %}
                                 </select>
                             </td>
+
                             <td data-label="Zonal Leader">
                                 <select form="audit-new" name="zonal_leader" id="f-zonal_leader" class="cell-input">
                                     <option value="">-- Select --</option>
-                                    {% for zl in zonal_leaders %}<option value="{{ zl }}">{{ zl }}</option>{% endfor %}
+                                    {% for zl in zonal_leaders %}
+                                    <option value="{{ zl }}">{{ zl }}</option>
+                                    {% endfor %}
                                 </select>
                             </td>
-                            <td data-label="NC Category"><input type="text" form="audit-new" name="nc_category" id="f-nc_category" class="cell-input" placeholder="e.g., 5S"></td>
-                            <td data-label="Description"><input type="text" form="audit-new" name="description" id="f-description" class="cell-input" placeholder="Describe the NC"></td>
-                            <td data-label="Action Taken"><input type="text" form="audit-new" name="action_taken_details" id="f-action_taken_details" class="cell-input" placeholder="Action taken"></td>
-                            <td data-label="Responsible HOD"><input type="text" form="audit-new" name="responsible_hod" id="f-responsible_hod" class="cell-input" placeholder="HOD name"></td>
-                            <td data-label="Responsible Email"><input type="email" form="audit-new" name="responsible_email" id="f-responsible_email" class="cell-input" placeholder="email@company.com"></td>
-                            <td data-label="Target Date"><input type="text" form="audit-new" name="target_date" id="f-target_date" class="cell-input date-input" placeholder="DD-MM-YYYY" autocomplete="off"></td>
+
+                            <td data-label="NC Category">
+                                <input type="text" form="audit-new" name="nc_category" id="f-nc_category" class="cell-input" placeholder="e.g., 5S">
+                            </td>
+
+                            <td data-label="Description">
+                                <input type="text" form="audit-new" name="description" id="f-description" class="cell-input" placeholder="Describe the NC">
+                            </td>
+
+                            <td data-label="Action Taken">
+                                <input type="text" form="audit-new" name="action_taken_details" id="f-action_taken_details" class="cell-input" placeholder="Action taken">
+                            </td>
+
+                            <td data-label="Responsible HOD">
+                                <input type="text" form="audit-new" name="responsible_hod" id="f-responsible_hod" class="cell-input" placeholder="HOD name">
+                            </td>
+
+                            <td data-label="Responsible Email">
+                                <input type="email" form="audit-new" name="responsible_email" id="f-responsible_email" class="cell-input" placeholder="email@company.com">
+                            </td>
+
+                            <td data-label="Target Date">
+                                <input type="text" form="audit-new" name="target_date" id="f-target_date" class="cell-input date-input" placeholder="DD-MM-YYYY" autocomplete="off">
+                            </td>
+
                             <td data-label="Status">
                                 <select form="audit-new" name="status" id="f-status" class="cell-input">
                                     <option value="open">Open</option>
                                     <option value="closed">Closed</option>
                                 </select>
                             </td>
-                            <td data-label="Before"><input type="file" form="audit-new" name="before_image" class="cell-file" accept="image/*"></td>
-                            <td data-label="After"><input type="file" form="audit-new" name="after_image" class="cell-file" accept="image/*"></td>
+
+                            <td data-label="Before">
+                                <input type="file" form="audit-new" name="before_image" class="cell-file" accept="image/*">
+                            </td>
+
+                            <td data-label="After">
+                                <input type="file" form="audit-new" name="after_image" class="cell-file" accept="image/*">
+                            </td>
+
                             <td data-label="Actions">
                                 <input type="hidden" form="audit-new" name="audit_id" id="f-audit_id" value="">
                                 <input type="hidden" form="audit-new" name="audit_type" value="HOD Audit">
-                                <button type="submit" form="audit-new" id="save-btn" class="btn btn-primary btn-sm">Save</button>
+
+                                <button type="submit" form="audit-new" id="save-btn" class="btn btn-primary btn-sm">
+                                    Save
+                                </button>
                             </td>
                         </tr>
+
                         {% for a in audits %}
                         <tr>
-                            <td data-label="Audit Date"><input type="text" form="audit-{{ a.id }}" name="audit_date" class="cell-input date-input" value="{{ a.audit_date.strftime('%d-%m-%Y') if a.audit_date else '' }}" autocomplete="off"></td>
+                            <td data-label="Audit Date">
+                                <input type="text" form="audit-{{ a.id }}" name="audit_date" class="cell-input date-input" value="{{ a.audit_date.strftime('%d-%m-%Y') if a.audit_date else '' }}" autocomplete="off">
+                            </td>
+
                             <td data-label="Plant">
                                 <select form="audit-{{ a.id }}" name="plant" class="cell-input">
                                     <option value="">-- Select --</option>
-                                    {% if a.plant and a.plant not in plants %}<option value="{{ a.plant }}" selected>{{ a.plant }}</option>{% endif %}
-                                    {% for p in plants %}<option value="{{ p }}" {% if a.plant == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
+
+                                    {% if a.plant and a.plant not in plants %}
+                                    <option value="{{ a.plant }}" selected>{{ a.plant }}</option>
+                                    {% endif %}
+
+                                    {% for p in plants %}
+                                    <option value="{{ p }}" {% if a.plant == p %}selected{% endif %}>{{ p }}</option>
+                                    {% endfor %}
                                 </select>
                             </td>
+
                             <td data-label="Zone">
                                 <select form="audit-{{ a.id }}" name="zone" class="cell-input">
                                     <option value="">-- Select --</option>
-                                    {% if a.zone and a.zone not in zones %}<option value="{{ a.zone }}" selected>{{ a.zone }}</option>{% endif %}
-                                    {% for z in zones %}<option value="{{ z }}" {% if a.zone == z %}selected{% endif %}>{{ z }}</option>{% endfor %}
+
+                                    {% if a.zone and a.zone not in zones %}
+                                    <option value="{{ a.zone }}" selected>{{ a.zone }}</option>
+                                    {% endif %}
+
+                                    {% for z in zones %}
+                                    <option value="{{ z }}" {% if a.zone == z %}selected{% endif %}>{{ z }}</option>
+                                    {% endfor %}
                                 </select>
                             </td>
+
                             <td data-label="Zonal Leader">
                                 <select form="audit-{{ a.id }}" name="zonal_leader" class="cell-input">
                                     <option value="">-- Select --</option>
-                                    {% if a.zonal_leader and a.zonal_leader not in zonal_leaders %}<option value="{{ a.zonal_leader }}" selected>{{ a.zonal_leader }}</option>{% endif %}
-                                    {% for zl in zonal_leaders %}<option value="{{ zl }}" {% if a.zonal_leader == zl %}selected{% endif %}>{{ zl }}</option>{% endfor %}
+
+                                    {% if a.zonal_leader and a.zonal_leader not in zonal_leaders %}
+                                    <option value="{{ a.zonal_leader }}" selected>{{ a.zonal_leader }}</option>
+                                    {% endif %}
+
+                                    {% for zl in zonal_leaders %}
+                                    <option value="{{ zl }}" {% if a.zonal_leader == zl %}selected{% endif %}>{{ zl }}</option>
+                                    {% endfor %}
                                 </select>
                             </td>
-                            <td data-label="NC Category"><input type="text" form="audit-{{ a.id }}" name="nc_category" class="cell-input" value="{{ a.nc_category }}"></td>
-                            <td data-label="Description"><input type="text" form="audit-{{ a.id }}" name="description" class="cell-input" value="{{ a.description }}"></td>
-                            <td data-label="Action Taken"><input type="text" form="audit-{{ a.id }}" name="action_taken_details" class="cell-input" value="{{ a.action_taken_details or '' }}"></td>
-                            <td data-label="Responsible HOD"><input type="text" form="audit-{{ a.id }}" name="responsible_hod" class="cell-input" value="{{ a.responsible_hod }}"></td>
-                            <td data-label="Responsible Email"><input type="email" form="audit-{{ a.id }}" name="responsible_email" class="cell-input" value="{{ a.responsible_email }}"></td>
-                            <td data-label="Target Date"><input type="text" form="audit-{{ a.id }}" name="target_date" class="cell-input date-input" value="{{ a.target_date.strftime('%d-%m-%Y') if a.target_date else '' }}" autocomplete="off"></td>
+
+                            <td data-label="NC Category">
+                                <input type="text" form="audit-{{ a.id }}" name="nc_category" class="cell-input" value="{{ a.nc_category or '' }}">
+                            </td>
+
+                            <td data-label="Description">
+                                <input type="text" form="audit-{{ a.id }}" name="description" class="cell-input" value="{{ a.description or '' }}">
+                            </td>
+
+                            <td data-label="Action Taken">
+                                <input type="text" form="audit-{{ a.id }}" name="action_taken_details" class="cell-input" value="{{ a.action_taken_details or '' }}">
+                            </td>
+
+                            <td data-label="Responsible HOD">
+                                <input type="text" form="audit-{{ a.id }}" name="responsible_hod" class="cell-input" value="{{ a.responsible_hod or '' }}">
+                            </td>
+
+                            <td data-label="Responsible Email">
+                                <input type="email" form="audit-{{ a.id }}" name="responsible_email" class="cell-input" value="{{ a.responsible_email or '' }}">
+                            </td>
+
+                            <td data-label="Target Date">
+                                <input type="text" form="audit-{{ a.id }}" name="target_date" class="cell-input date-input" value="{{ a.target_date.strftime('%d-%m-%Y') if a.target_date else '' }}" autocomplete="off">
+                            </td>
+
                             <td data-label="Status">
                                 <select form="audit-{{ a.id }}" name="status" class="cell-input">
                                     <option value="open" {% if a.status == 'open' %}selected{% endif %}>Open</option>
                                     <option value="closed" {% if a.status == 'closed' %}selected{% endif %}>Closed</option>
                                 </select>
                             </td>
+
                             <td data-label="Before">
                                 {% if a.before_image %}
                                 <a href="{{ url_for('static', filename='uploads/' + a.before_image) }}" target="_blank">
                                     <img src="{{ url_for('static', filename='uploads/' + a.before_image) }}" alt="Before" style="max-height:60px; border-radius:6px; border:1px solid var(--gray-border); cursor:pointer;">
                                 </a>
                                 {% endif %}
+
                                 <input type="file" form="audit-{{ a.id }}" name="before_image" class="cell-file" accept="image/*">
                             </td>
+
                             <td data-label="After">
                                 {% if a.after_image %}
                                 <a href="{{ url_for('static', filename='uploads/' + a.after_image) }}" target="_blank">
                                     <img src="{{ url_for('static', filename='uploads/' + a.after_image) }}" alt="After" style="max-height:60px; border-radius:6px; border:1px solid var(--gray-border); cursor:pointer;">
                                 </a>
                                 {% endif %}
+
                                 <input type="file" form="audit-{{ a.id }}" name="after_image" class="cell-file" accept="image/*">
                             </td>
+
                             <td data-label="Actions">
-                                <button type="submit" form="audit-{{ a.id }}" class="btn btn-primary btn-sm">Update</button>
+                                <button type="submit" form="audit-{{ a.id }}" class="btn btn-primary btn-sm">
+                                    Update
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+
+            <!-- Form for creating a new audit -->
             <form id="audit-new" method="POST" action="{{ url_for('save_audit') }}" enctype="multipart/form-data"></form>
+
+            <!-- Forms for updating existing audits -->
             {% for a in audits %}
             <form id="audit-{{ a.id }}" method="POST" action="{{ url_for('save_audit') }}" enctype="multipart/form-data">
                 <input type="hidden" name="audit_id" value="{{ a.id }}">
@@ -184,77 +283,191 @@ YG1.onReady(function() {
 
 function showFlash(message, category) {
     var container = document.querySelector('.flash-container');
+
     if (!container) {
         container = document.createElement('div');
         container.className = 'flash-container';
+
         var main = document.querySelector('.main');
         main.insertBefore(container, main.firstChild);
     }
+
     var el = document.createElement('div');
     el.className = 'flash flash-' + category;
-    el.innerHTML = '<span class="flash-icon">' + (category === 'success' ? '✓' : category === 'error' ? '✕' : 'ℹ') + '</span>' +
-        '<span class="flash-text">' + message + '</span>' +
-        '<button class="flash-close" onclick="this.parentElement.remove()">&times;</button>';
+
+    var icon = document.createElement('span');
+    icon.className = 'flash-icon';
+    icon.textContent = category === 'success' ? '✓' :
+                       category === 'error' ? '✕' : 'ℹ';
+
+    var text = document.createElement('span');
+    text.className = 'flash-text';
+    text.textContent = message;
+
+    var close = document.createElement('button');
+    close.className = 'flash-close';
+    close.type = 'button';
+    close.textContent = '×';
+    close.addEventListener('click', function() {
+        el.remove();
+    });
+
+    el.appendChild(icon);
+    el.appendChild(text);
+    el.appendChild(close);
     container.appendChild(el);
+
     if (category === 'success') {
-        setTimeout(function() { window.location.reload(); }, 1200);
+        setTimeout(function() {
+            window.location.reload();
+        }, 1200);
     } else {
-        setTimeout(function() { el.remove(); }, 5000);
+        setTimeout(function() {
+            el.remove();
+        }, 7000);
     }
 }
 
-function submitAuditForm(formId) {
-    var form = document.getElementById(formId);
-    if (!form) return;
-    var btn = form.querySelector('button[type="submit"]');
-    var originalText = btn.textContent;
-    btn.textContent = 'Saving...';
+/*
+ * Collect all controls associated with the form.
+ * The table inputs use the HTML form attribute, so they are not
+ * physically inside the form element.
+ */
+function buildAuditFormData(form) {
+    var formData = new FormData();
+
+    Array.from(form.elements).forEach(function(control) {
+        if (!control.name || control.disabled) {
+            return;
+        }
+
+        if (
+            (control.type === 'checkbox' || control.type === 'radio') &&
+            !control.checked
+        ) {
+            return;
+        }
+
+        if (control.type === 'file') {
+            Array.from(control.files || []).forEach(function(file) {
+                formData.append(control.name, file);
+            });
+        } else {
+            formData.append(control.name, control.value);
+        }
+    });
+
+    return formData;
+}
+
+function submitAuditForm(form) {
+    if (!form || form.dataset.submitting === 'true') {
+        return;
+    }
+
+    var btn = document.querySelector(
+        'button[type="submit"][form="' + form.id + '"]'
+    );
+
+    if (!btn) {
+        showFlash('Could not find the Save or Update button.', 'error');
+        return;
+    }
+
+    var originalText = btn.textContent.trim();
+
+    btn.textContent = form.id === 'audit-new' ? 'Saving...' : 'Updating...';
     btn.disabled = true;
-    var formData = new FormData(form);
+    form.dataset.submitting = 'true';
+
+    var formData = buildAuditFormData(form);
     var controller = new AbortController();
-    var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
+
+    var timeoutId = setTimeout(function() {
+        controller.abort();
+    }, 30000);
+
     fetch(form.action, {
         method: 'POST',
         body: formData,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        },
         signal: controller.signal
     })
-    .then(function(res) {
-        if (!res.ok) {
-            return res.json().then(function(errData) {
-                throw { message: errData.message || (errData.errors && errData.errors.join('\n')) || 'Save failed (HTTP ' + res.status + ')', errors: errData.errors };
-            });
-        }
-        return res.json();
+    .then(function(response) {
+        return response.text().then(function(responseText) {
+            var data;
+
+            try {
+                data = JSON.parse(responseText);
+            } catch (error) {
+                throw new Error(
+                    'The server returned an unexpected response (HTTP ' +
+                    response.status +
+                    '). Check the Flask route and server logs.'
+                );
+            }
+
+            if (!response.ok) {
+                throw new Error(
+                    data.message ||
+                    (data.errors && data.errors.join('\n')) ||
+                    'Request failed with HTTP ' + response.status
+                );
+            }
+
+            if (data.ok !== true) {
+                throw new Error(
+                    data.message ||
+                    (data.errors && data.errors.join('\n')) ||
+                    'The server did not confirm that the record was saved.'
+                );
+            }
+
+            return data;
+        });
     })
     .then(function(data) {
-        if (data.ok) {
-            showFlash(data.message || 'Audit record saved successfully!', 'success');
-            setTimeout(function() { window.location.reload(); }, 1200);
-        } else {
-            showFlash(data.message || 'Save failed.', 'error');
-        }
+        showFlash(
+            data.message ||
+            (form.id === 'audit-new'
+                ? 'Audit record saved successfully!'
+                : 'Audit record updated successfully!'),
+            'success'
+        );
     })
-    .catch(function(err) {
-        if (err.name === 'AbortError') {
-            showFlash('Request timed out. Please try again.', 'error');
-        } else if (err.message) {
-            showFlash(err.message, 'error');
+    .catch(function(error) {
+        if (error.name === 'AbortError') {
+            showFlash(
+                'The request timed out. Check the server and database before retrying.',
+                'error'
+            );
         } else {
-            showFlash('Save failed. Please try again.', 'error');
+            console.error('Audit save/update error:', error);
+            showFlash(
+                error.message || 'Save or update failed. Please try again.',
+                'error'
+            );
         }
     })
     .finally(function() {
         clearTimeout(timeoutId);
+        form.dataset.submitting = 'false';
         btn.textContent = originalText;
         btn.disabled = false;
     });
 }
 
+/*
+ * Attach the AJAX handler to the separate forms.
+ * Their associated table inputs are included through form.elements.
+ */
 document.querySelectorAll('form[id^="audit-"]').forEach(function(form) {
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        submitAuditForm(form.id);
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        submitAuditForm(form);
     });
 });
 </script>
