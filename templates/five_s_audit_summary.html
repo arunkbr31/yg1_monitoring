@@ -50,19 +50,19 @@
                     {% if audits %}
                         {% for audit in audits %}
                         <tr>
-                            <td>{{ loop.index }}</td>
-                            <td>{{ audit.audit_date.strftime('%d-%m-%Y') if audit.audit_date else '' }}</td>
-                            <td>{{ audit.auditor }}</td>
-                            <td><span class="badge badge-plant1">{{ audit.zone }}</span></td>
-                            <td>{{ audit.auditee }}</td>
-                            <td>
+                            <td data-label="#">{{ loop.index }}</td>
+                            <td data-label="Date">{{ audit.audit_date.strftime('%d-%m-%Y') if audit.audit_date else '' }}</td>
+                            <td data-label="Auditor">{{ audit.auditor }}</td>
+                            <td data-label="Zone/Section"><span class="badge badge-plant1">{{ audit.zone }}</span></td>
+                            <td data-label="Auditee">{{ audit.auditee }}</td>
+                            <td data-label="Score">
                                 <span style="font-weight:700;">{{ audit.total_score }} / {{ audit.max_score }}</span>
                             </td>
-                            <td>
+                            <td data-label="Percentage">
                                 <span style="font-weight:700; color:var(--primary);">{{ audit.percentage }}%</span>
                             </td>
-                            <td>{{ audit.created_at.strftime('%d-%m-%Y %H:%M') }}</td>
-                            <td>
+                            <td data-label="Created">{{ audit.created_at.strftime('%d-%m-%Y %H:%M') }}</td>
+                            <td data-label="Action">
                                 <a href="{{ url_for('five_s_check_sheet_detail', record_id=audit.id) }}" class="btn btn-sm btn-outline">View</a>
                             </td>
                         </tr>
@@ -80,10 +80,15 @@
 </div>
 <style>
     .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .table-scroll table { min-width: 720px; }
-    .table-scroll th, .table-scroll td { border-bottom:1px solid var(--gray-border); padding:12px 14px; text-align:left; vertical-align:middle; background:#fff; }
-    .table-scroll thead th { background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%); color:#fff; font-weight:700; text-transform:uppercase; font-size:11px; letter-spacing:.6px; white-space:nowrap; }
+    .table-scroll table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .table-scroll th, .table-scroll td { border-bottom:1px solid var(--gray-border); padding:12px 14px; text-align:left; vertical-align:middle; background:#fff; white-space: nowrap; }
+    .table-scroll thead th { background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%); color:#fff; font-weight:700; text-transform:uppercase; font-size:11px; letter-spacing:.6px; border-bottom: 2px solid var(--primary-dark); white-space: nowrap; }
     .table-scroll tbody tr:hover td { background:#f8fafc; }
     .table-scroll tbody tr:last-child td { border-bottom:none; }
+    @media (max-width: 768px) {
+        .table-scroll table { min-width: auto; width: 100%; }
+        .table-scroll th, .table-scroll td { white-space: normal; padding: 10px 12px; font-size: 13px; }
+        .table-scroll th { font-size: 11px; }
+    }
 </style>
 {% endblock %}
