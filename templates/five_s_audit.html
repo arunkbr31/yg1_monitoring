@@ -50,6 +50,19 @@
                 <p>No 5S audit records found for the selected zone in the current year.</p>
             </div>
         </div>
+
+        <div class="card" style="position:relative;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+                <h3 style="margin:0;">Good Score Count (>= 70%)</h3>
+            </div>
+            <div style="position:relative; height:320px;">
+                <canvas id="fiveSGoodChart"></canvas>
+            </div>
+            <div id="fiveSGoodNoDataMsg" style="display:none; text-align:center; padding:40px; color:var(--text-light);">
+                <div style="font-size:40px; margin-bottom:8px;">📊</div>
+                <p>No good score records found for the selected zone in the current year.</p>
+            </div>
+        </div>
     </main>
 </div>
 {% endblock %}
@@ -58,7 +71,9 @@
 <script>
 YG1.onReady(function() {
     let chartInstance = null;
+    let goodChartInstance = null;
     const noDataMsg = document.getElementById('fiveSNoDataMsg');
+    const goodNoDataMsg = document.getElementById('fiveSGoodNoDataMsg');
 
     function renderChart(monthlyStats) {
         const canvas = document.getElementById('fiveSMonthlyChart');
@@ -68,36 +83,91 @@ YG1.onReady(function() {
             canvas.style.display = 'none';
             noDataMsg.style.display = 'block';
             if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+        } else {
+            canvas.style.display = 'block';
+            noDataMsg.style.display = 'none';
+            if (chartInstance) { chartInstance.destroy(); }
+
+            const monthLabels = monthlyStats.map(m => m.month);
+            const monthGood = monthlyStats.map(m => m.good);
+            const monthPoor = monthlyStats.map(m => m.poor);
+
+            chartInstance = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: monthLabels,
+                    datasets: [
+                        {
+                            label: 'Good (>=70%)',
+                            data: monthGood,
+                            backgroundColor: '#16a34a',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Poor (<70%)',
+                            data: monthPoor,
+                            backgroundColor: '#dc2626',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 },
+                            title: { display: true, text: 'Score Count (up to 100)' },
+                            max: 100
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ctx.dataset.label + ': ' + ctx.parsed.y + ' score';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    function renderGoodChart(monthlyStats) {
+        const canvas = document.getElementById('fiveSGoodChart');
+        const hasData = monthlyStats.some(m => m.good > 0);
+
+        if (!hasData) {
+            canvas.style.display = 'none';
+            goodNoDataMsg.style.display = 'block';
+            if (goodChartInstance) { goodChartInstance.destroy(); goodChartInstance = null; }
             return;
         }
 
         canvas.style.display = 'block';
-        noDataMsg.style.display = 'none';
+        goodNoDataMsg.style.display = 'none';
 
-        if (chartInstance) { chartInstance.destroy(); }
+        if (goodChartInstance) { goodChartInstance.destroy(); }
 
         const monthLabels = monthlyStats.map(m => m.month);
         const monthGood = monthlyStats.map(m => m.good);
-        const monthPoor = monthlyStats.map(m => m.poor);
 
-        chartInstance = new Chart(canvas, {
+        goodChartInstance = new Chart(canvas, {
             type: 'bar',
             data: {
                 labels: monthLabels,
-                datasets: [
-                    {
-                        label: 'Good (>=70%)',
-                        data: monthGood,
-                        backgroundColor: '#16a34a',
-                        borderRadius: 4
-                    },
-                    {
-                        label: 'Poor (<70%)',
-                        data: monthPoor,
-                        backgroundColor: '#dc2626',
-                        borderRadius: 4
-                    }
-                ]
+                datasets: [{
+                    label: 'Good Score (>= 70%)',
+                    data: monthGood,
+                    backgroundColor: '#16a34a',
+                    borderRadius: 4
+                }]
             },
             options: {
                 responsive: true,
@@ -106,24 +176,63 @@ YG1.onReady(function() {
                     y: {
                         beginAtZero: true,
                         ticks: { precision: 0 },
-                        title: { display: true, text: 'Score Count (up to 100)' },
+                        title: { display: true, text: 'Good Score Count (up to 100)' },
                         max: 100
                     }
                 },
                 plugins: {
                     legend: { position: 'bottom' },
                     tooltip: {
-                        mode: 'index',
-                        intersect: false,
                         callbacks: {
                             label: function(ctx) {
-                                return ctx.dataset.label + ': ' + ctx.parsed.y + ' score';
+                                return ctx.dataset.label + ': ' + ctx.parsed.y + ' good score';
                             }
                         }
                     }
+                },
+                layout: {
+                    padding: 20
                 }
-            }
+            },
+            plugins: [{
+                id: 'spinningTrophyOnBars',
+                afterDatasetsDraw(chart) {
+                    const ctx = chart.ctx;
+                    chart.data.datasets.forEach((dataset, datasetIndex) => {
+                        const meta = chart.getDatasetMeta(datasetIndex);
+                        if (!meta.hidden) {
+                            meta.data.forEach((bar, index) => {
+                                const value = dataset.data[index];
+                                if (value > 0) {
+                                    const x = bar.x;
+                                    const y = bar.y - 10;
+                                    const angle = ((Date.now() % 2000) / 2000) * Math.PI * 2;
+                                    ctx.save();
+                                    ctx.translate(x, y);
+                                    ctx.rotate(angle);
+                                    ctx.font = '16px Arial';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'bottom';
+                                    ctx.fillText('🏆', 0, 0);
+                                    ctx.restore();
+                                }
+                            });
+                        }
+                    });
+                }
+            }]
         });
+
+        // Keep trophies spinning by redrawing continuously
+        (function spinLoop() {
+            if (!goodChartInstance) return;
+            try {
+                goodChartInstance.update('none');
+            } catch (e) {
+                return;
+            }
+            requestAnimationFrame(spinLoop);
+        })();
     }
 
     function fetchAndRender(zone) {
@@ -132,7 +241,10 @@ YG1.onReady(function() {
 
         fetch(url)
             .then(res => res.json())
-            .then(data => renderChart(data.monthly_stats))
+            .then(data => {
+                renderChart(data.monthly_stats);
+                renderGoodChart(data.monthly_stats);
+            })
             .catch(err => console.error('5S chart data error:', err));
     }
 
