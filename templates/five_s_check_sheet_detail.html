@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block title %}5S Audit Check Sheet #{{ record.id }} | YG1 Monitoring{% endblock %}
+{% block body_class %}five-s-check-sheet-page{% endblock %}
+{% block content %}
+<div class="layout">
+    {% include "_sidebar.html" %}
+
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1>5S Audit Check Sheet</h1>
+                <p>Saved audit record for zone <strong>{{ record.zone }}</strong></p>
+            </div>
+            <div class="actions">
+                <a href="{{ url_for('five_s_audit_summary') }}" class="btn btn-outline">Back to List</a>
+                <a href="{{ url_for('five_s_check_sheet') }}" class="btn btn-primary">+ New Audit</a>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">
+                    <span class="flash-icon">{% if category == 'success' %}✓{% elif category == 'error' %}✕{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}</span>
+                    <span class="flash-text">{{ message }}</span>
+                    <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="card">
+            <div class="header-grid">
+                <div class="form-group"><label>Date</label><input type="text" value="{{ record.audit_date.strftime('%d-%m-%Y') if record.audit_date else '' }}" disabled></div>
+                <div class="form-group"><label>Auditor</label><input type="text" value="{{ record.auditor }}" disabled></div>
+                <div class="form-group"><label>Zone/Section</label><input type="text" value="{{ record.zone }}" disabled></div>
+                <div class="form-group"><label>Auditee</label><input type="text" value="{{ record.auditee }}" disabled></div>
+            </div>
+
+            <div style="margin-top:10px; display:flex; gap:14px; flex-wrap:wrap; font-size:13px; color:var(--text-light);">
+                <span><b>Total Score:</b> {{ record.total_score }} / {{ record.max_score }}</span>
+                <span><b>Percentage:</b> {{ record.percentage }}%</span>
+                <span><b>Saved:</b> {{ record.created_at.strftime('%d-%m-%Y %H:%M') }}</span>
+            </div>
+
+            <table class="checksheet-table">
+                <thead>
+                    <tr>
+                        <th style="width:40px;">#</th>
+                        <th>5S Item / Question</th>
+                        <th style="width:130px;">Score</th>
+                        <th style="width:260px;">Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% set loop_index = namespace(value=0) %}
+                {% for section_name, items in checklist %}
+                    <tr class="section-header"><td colspan="4">{{ section_name }}</td></tr>
+                    {% for item_id, item_name, question in items %}
+                        {% set loop_index.value = loop_index.value + 1 %}
+                        {% set resp = responses.get(item_id, {}) %}
+                        <tr>
+                            <td>{{ loop_index.value }}</td>
+                            <td>
+                                <div class="item-name">{{ item_id }} - {{ item_name }}</div>
+                                <div class="item-question">{{ question }}</div>
+                            </td>
+                            <td>
+                                {% if resp.score %}
+                                <span class="score-badge score-{{ resp.score }}">{{ resp.score }}</span>
+                                {% else %}
+                                <span style="color:var(--text-light);">--</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ resp.remarks or '&mdash;' }}</td>
+                        </tr>
+                    {% endfor %}
+                {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="scoring-legend">
+                <b>Scoring System:</b>
+                {% for score, label, desc in scoring %}
+                <span><b>{{ score }} - {{ label }}:</b> {{ desc }}</span>
+                {% endfor %}
+            </div>
+        </div>
+    </main>
+</div>
+
+<style>
+    .header-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+    .header-grid .form-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 6px;
+    }
+    .header-grid input {
+        width: 100%;
+        height: 42px;
+        padding: 0 12px;
+        border: 1.5px solid var(--gray-border);
+        border-radius: 10px;
+        background: #f8fafc;
+        font-size: 14px;
+        font-family: inherit;
+        color: var(--text);
+        box-sizing: border-box;
+    }
+    .checksheet-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 13.5px;
+        margin-top: 12px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 8px 22px rgba(15,23,42,.06);
+        max-width: 100%;
+    }
+    .checksheet-table th,
+    .checksheet-table td {
+        border: none;
+        border-bottom: 1px solid var(--gray-border);
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: middle;
+        background: #fff;
+        word-wrap: break-word;
+    }
+    .checksheet-table tbody tr:last-child td { border-bottom: none; }
+    .checksheet-table thead th {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: #fff;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.6px;
+        border-bottom: 2px solid var(--primary-dark);
+        white-space: nowrap;
+    }
+    .section-header td {
+        background: var(--primary-light);
+        color: var(--primary-dark);
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: .3px;
+        padding: 10px 14px;
+    }
+    .checksheet-table tbody tr:not(.section-header):hover td { background: #f8fafc; }
+    .item-name {
+        font-weight: 700;
+        color: var(--dark);
+        display: block;
+        margin-bottom: 2px;
+        font-size: 13.5px;
+    }
+    .item-question {
+        font-size: 12px;
+        color: var(--text-light);
+        display: block;
+        line-height: 1.4;
+    }
+    .score-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #fff;
+    }
+    .score-badge.score-5 { background: var(--success); }
+    .score-badge.score-4 { background: #2f8f45; }
+    .score-badge.score-3 { background: var(--warning); }
+    .score-badge.score-2 { background: #b45309; }
+    .score-badge.score-1 { background: var(--danger); }
+    .scoring-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 14px;
+        margin-top: 18px;
+        font-size: 12px;
+        color: var(--text-light);
+        border-top: 1px solid var(--gray-border);
+        padding-top: 14px;
+    }
+    .scoring-legend span {
+        background: #f8fafc;
+        border: 1px solid var(--gray-border);
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-weight: 500;
+    }
+    .scoring-legend b { color: var(--dark); }
+    @media (max-width: 768px) {
+        .checksheet-table th,
+        .checksheet-table td { padding: 8px 10px; font-size: 12px; }
+        .scoring-legend span { display: block; }
+        .header-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}

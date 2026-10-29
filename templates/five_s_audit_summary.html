@@ -9,24 +9,80 @@
         <div class="page-header">
             <div>
                 <h1>5S Audit Summary</h1>
-                <p>Full audit record table for 5S audits</p>
+                <p>Saved 5S audit check sheets - same checklist format for every zone.</p>
+            </div>
+            <div class="actions">
+                <a href="{{ url_for('five_s_check_sheet') }}" class="btn btn-primary">+ New Check Sheet</a>
             </div>
         </div>
 
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">
+                    <span class="flash-icon">{% if category == 'success' %}✓{% elif category == 'error' %}✕{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}</span>
+                    <span class="flash-text">{{ message }}</span>
+                    <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
         <div class="card">
-            <p style="margin:0; color:var(--text-light);">5S audit data will be shown here.</p>
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:60px;">#</th>
+                            <th>Date</th>
+                            <th>Auditor</th>
+                            <th>Zone/Section</th>
+                            <th>Auditee</th>
+                            <th style="width:140px;">Score</th>
+                            <th style="width:110px;">Percentage</th>
+                            <th style="width:100%;">Created</th>
+                            <th style="width:140px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% if audits %}
+                        {% for audit in audits %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ audit.audit_date.strftime('%d-%m-%Y') if audit.audit_date else '' }}</td>
+                            <td>{{ audit.auditor }}</td>
+                            <td><span class="badge badge-plant1">{{ audit.zone }}</span></td>
+                            <td>{{ audit.auditee }}</td>
+                            <td>
+                                <span style="font-weight:700;">{{ audit.total_score }} / {{ audit.max_score }}</span>
+                            </td>
+                            <td>
+                                <span style="font-weight:700; color:var(--primary);">{{ audit.percentage }}%</span>
+                            </td>
+                            <td>{{ audit.created_at.strftime('%d-%m-%Y %H:%M') }}</td>
+                            <td>
+                                <a href="{{ url_for('five_s_check_sheet_detail', record_id=audit.id) }}" class="btn btn-sm btn-outline">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="9" style="text-align:center; padding:30px; color:var(--text-light);">No 5S audit check sheets saved yet. Create one from the check sheet form.</td>
+                        </tr>
+                    {% endif %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </main>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-YG1.onReady(function() {
-    flatpickr('.date-input', {
-        dateFormat: 'd-m-Y',
-        allowInput: true
-    });
-});
-</script>
+<style>
+    .table-scroll table { width:100%; border-collapse:separate; border-spacing:0; border-radius:12px; overflow:hidden; box-shadow:0 1px 2px rgba(15,23,42,.04), 0 8px 22px rgba(15,23,42,.06); }
+    .table-scroll th, .table-scroll td { border-bottom:1px solid var(--gray-border); padding:12px 14px; text-align:left; vertical-align:middle; background:#fff; }
+    .table-scroll thead th { background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%); color:#fff; font-weight:700; text-transform:uppercase; font-size:11px; letter-spacing:.6px; white-space:nowrap; }
+    .table-scroll tbody tr:hover td { background:#f8fafc; }
+    .table-scroll tbody tr:last-child td { border-bottom:none; }
+</style>
 {% endblock %}

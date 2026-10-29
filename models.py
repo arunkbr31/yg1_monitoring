@@ -136,3 +136,29 @@ class NCR(db.Model):
 
     def __repr__(self):
         return f'<NCR {self.id} - {self.document_no}>'
+
+
+class FiveSAudit(db.Model):
+    __tablename__ = 'five_s_audit'
+    id = db.Column(db.Integer, primary_key=True)
+    audit_date = db.Column(db.Date, nullable=False)
+    plant = db.Column(db.String(100), nullable=False, default='')
+    auditor = db.Column(db.String(100), nullable=False)
+    zone = db.Column(db.String(100), nullable=False)
+    status = db.Column(db.String(20), nullable=False, default='open')
+    scores = db.Column(db.Text, nullable=False, default='')
+    remarks = db.Column(db.Text, nullable=False, default='')
+    auditee = db.Column(db.String(100), nullable=False, default='')
+    responses = db.Column(db.Text, nullable=False, default='{}')
+    total_score = db.Column(db.Float, default=0.0)
+    max_score = db.Column(db.Float, default=0.0)
+    percentage = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def get_responses(self):
+        import json
+        return json.loads(self.responses or '{}')
+
+    def __repr__(self):
+        return f'<FiveSAudit {self.id} - {self.zone} - {self.audit_date}>'

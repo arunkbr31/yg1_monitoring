@@ -1,0 +1,523 @@
+{% extends "base.html" %}
+{% block title %}5S Audit Check Sheet | YG1 Monitoring{% endblock %}
+{% block body_class %}five-s-check-sheet-page{% endblock %}
+{% block content %}
+<div class="layout">
+    {% include "_sidebar.html" %}
+
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1>5S Audit Check Sheet</h1>
+                <p>One identical checklist format for every zone. Select the zone and save the result.</p>
+            </div>
+            <div class="actions">
+                <a href="{{ url_for('five_s_audit_summary') }}" class="btn btn-outline">View Saved Audits</a>
+            </div>
+        </div>
+
+        <div id="flashContainer" class="flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">
+                    <span class="flash-icon">{% if category == 'success' %}✓{% elif category == 'error' %}✕{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}</span>
+                    <span class="flash-text">{{ message }}</span>
+                    <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                </div>
+                {% endfor %}
+            {% endwith %}
+        </div>
+
+        <div class="card">
+            <form id="fiveSAuditForm" action="{{ url_for('save_five_s_check_sheet') }}" method="POST">
+                <div class="header-grid">
+                    <div class="form-group">
+                        <label>Date <span style="color:var(--danger);">*</span></label>
+                        <input type="date" name="audit_date" class="audit_date" value="{{ now.strftime('%d-%m-%Y') if now else '' }}" required placeholder="DD-MM-YYYY">
+                    </div>
+                    <div class="form-group">
+                        <label>Auditor <span style="color:var(--danger);">*</span></label>
+                        <input type="text" name="auditor" value="" required placeholder="Auditor name">
+                    </div>
+                    <div class="form-group">
+                        <label>Zone/Section <span style="color:var(--danger);">*</span></label>
+                        <select name="zone" required>
+                            <option value="">Select zone</option>
+                            {% for zone in zones %}
+                            <option value="{{ zone }}">{{ zone }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Auditee <span style="color:var(--danger);">*</span></label>
+                        <input type="text" name="auditee" value="" required placeholder="Person audited">
+                    </div>
+                </div>
+
+                <table class="checksheet-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>5S Item / Question</th>
+                            <th style="width:130px;">Score (1-5)</th>
+                            <th style="width:260px;">Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% set loop_index = namespace(value=0) %}
+                    {% for section_name, items in checklist %}
+                        <tr class="section-header">
+                            <td colspan="4">{{ section_name }}</td>
+                        </tr>
+                        {% for item_id, item_name, question in items %}
+                            {% set loop_index.value = loop_index.value + 1 %}
+                            <tr>
+                                <td>{{ loop_index.value }}</td>
+                                <td>
+                                    <div class="item-name">{{ item_id }} - {{ item_name }}</div>
+                                    <div class="item-question">{{ question }}</div>
+                                </td>
+                                <td>
+                                    <select name="score_{{ item_id }}" class="score-select" required>
+                                        <option value="">--</option>
+                                        <option value="5">5 - Excellent</option>
+                                        <option value="4">4 - Good</option>
+                                        <option value="3">3 - Average</option>
+                                        <option value="2">2 - Poor</option>
+                                        <option value="1">1 - Very Poor</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <textarea name="remark_{{ item_id }}" class="remark" placeholder="Remarks (optional)"></textarea>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="scoring-legend">
+                    <b>Scoring System:</b>
+                    {% for score, label, desc in scoring %}
+                    <span><b>{{ score }} - {{ label }}:</b> {{ desc }}</span>
+                    {% endfor %}
+                </div>
+
+                <div style="margin-top:18px; display:flex; gap:10px; align-items:center;">
+                    <button type="submit" class="btn btn-primary" id="saveBtn">
+                        <span id="saveBtnText">Save 5S Audit</span>
+                        <span id="saveBtnSpinner" style="display:none;">&nbsp;</span>
+                    </button>
+                    <span id="saveStatus" style="font-size:13px; color:var(--text-light); margin-left:8px;"></span>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+<style>
+    .header-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+    .header-grid .form-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 6px;
+    }
+    .header-grid .form-group input,
+    .header-grid .form-group select {
+        width: 100%;
+        height: 42px;
+        padding: 0 12px;
+        border: 1.5px solid var(--gray-border);
+        border-radius: 10px;
+        background: #fff;
+        font-size: 14px;
+        font-family: inherit;
+        color: var(--dark);
+        transition: border-color .2s, box-shadow .2s;
+        box-sizing: border-box;
+    }
+    .header-grid .form-group input:focus,
+    .header-grid .form-group select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .checksheet-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 13.5px;
+        margin-top: 12px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 8px 22px rgba(15,23,42,.06);
+        max-width: 100%;
+    }
+    .checksheet-table th,
+    .checksheet-table td {
+        border: none;
+        border-bottom: 1px solid var(--gray-border);
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: middle;
+        background: #fff;
+        word-wrap: break-word;
+    }
+    .checksheet-table tbody tr:last-child td { border-bottom: none; }
+    .checksheet-table thead th {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: #fff;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 11px;
+        letter-spacing: 0.6px;
+        border-bottom: 2px solid var(--primary-dark);
+        white-space: nowrap;
+    }
+    .section-header td {
+        background: var(--primary-light);
+        color: var(--primary-dark);
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: .3px;
+        padding: 10px 14px;
+    }
+    .checksheet-table tbody tr:not(.section-header):hover td { background: #f8fafc; }
+    .checksheet-table tbody tr:hover .section-header td { background: var(--primary-light); }
+    .item-name {
+        font-weight: 700;
+        color: var(--dark);
+        display: block;
+        margin-bottom: 2px;
+        font-size: 13.5px;
+    }
+    .item-question {
+        font-size: 12px;
+        color: var(--text-light);
+        display: block;
+        line-height: 1.4;
+    }
+    select.score-select {
+        width: 100%;
+        height: 38px;
+        padding: 0 10px;
+        border: 1.5px solid var(--gray-border);
+        border-radius: 8px;
+        background: #fff;
+        font-size: 13px;
+        font-family: inherit;
+        transition: border .2s, box-shadow .2s;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+    select.score-select:focus {
+        outline: none;
+        background: #fff;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15), inset 0 1px 2px rgba(15,23,42,.04);
+    }
+    textarea.remark {
+        width: 100%;
+        min-height: 52px;
+        padding: 8px 10px;
+        border: 1.5px solid var(--gray-border);
+        border-radius: 8px;
+        font-size: 13px;
+        font-family: inherit;
+        transition: border .2s, box-shadow .2s;
+        resize: vertical;
+        box-sizing: border-box;
+    }
+    textarea.remark:focus {
+        outline: none;
+        background: #fff;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15), inset 0 1px 2px rgba(15,23,42,.04);
+    }
+    .scoring-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 14px;
+        margin-top: 18px;
+        font-size: 12px;
+        color: var(--text-light);
+        border-top: 1px solid var(--gray-border);
+        padding-top: 14px;
+    }
+    .scoring-legend span {
+        background: #f8fafc;
+        border: 1px solid var(--gray-border);
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-weight: 500;
+    }
+    .scoring-legend b { color: var(--dark); }
+    #saveBtn {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 22px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform .15s, box-shadow .15s, opacity .15s;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+    #saveBtn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+    }
+    #saveBtn:disabled { opacity: .7; cursor: not-allowed; }
+    @media (max-width: 768px) {
+        .checksheet-table th,
+        .checksheet-table td {
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+        .scoring-legend span {
+            display: block;
+        }
+        .header-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    @media (max-width: 480px) {
+        .checksheet-table { font-size: 12px; }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+YG1.onReady(function() {
+    flatpickr('.date-input', {
+        dateFormat: 'd-m-Y',
+        allowInput: true,
+        defaultDate: new Date()
+    });
+
+    
+var form = document.getElementById('fiveSAuditForm');
+var saveBtn = document.getElementById('saveBtn');
+var saveStatus = document.getElementById('saveStatus');
+var flashContainer = document.getElementById('flashContainer');
+
+// Show success and error popup messages
+function showFlash(message, category) {
+    var el = document.createElement('div');
+
+    var icon = category === 'success' ? '✓'
+        : category === 'error' ? '✕'
+        : category === 'warning' ? '⚠'
+        : 'ℹ';
+
+    el.className = 'flash flash-' + category;
+
+    el.style.cssText =
+        'display:flex;align-items:center;gap:12px;' +
+        'padding:14px 18px;border-radius:12px;' +
+        'font-size:14px;font-weight:600;' +
+        'animation:flashIn .4s cubic-bezier(.175,.885,.32,1.275);' +
+        'margin-top:12px;box-shadow:0 10px 30px rgba(0,0,0,.12);';
+
+    var iconSpan = document.createElement('span');
+    iconSpan.className = 'flash-icon';
+    iconSpan.style.cssText =
+        'font-size:20px;line-height:1;flex-shrink:0;';
+    iconSpan.textContent = icon;
+
+    var messageSpan = document.createElement('span');
+    messageSpan.className = 'flash-text';
+    messageSpan.style.cssText = 'flex:1;line-height:1.4;';
+    messageSpan.textContent = message;
+
+    var closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'flash-close';
+    closeBtn.textContent = '×';
+    closeBtn.setAttribute('aria-label', 'Close notification');
+    closeBtn.style.cssText =
+        'background:none;border:none;font-size:18px;' +
+        'cursor:pointer;color:inherit;opacity:.6;padding:0 2px;line-height:1;';
+
+    closeBtn.addEventListener('click', function () {
+        el.remove();
+    });
+
+    el.appendChild(iconSpan);
+    el.appendChild(messageSpan);
+    el.appendChild(closeBtn);
+
+    if (!flashContainer) {
+        alert(message);
+        return;
+    }
+
+    flashContainer.insertBefore(el, flashContainer.firstElementChild);
+
+    setTimeout(function () {
+        el.remove();
+    }, 5000);
+}
+
+
+// Restore the Save button and stop the spinner
+function stopLoading() {
+    if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML =
+            '<span id="saveBtnText">Save 5S Audit</span>';
+    }
+}
+
+
+// Set today's date using local time
+function setTodayDate() {
+    var dateInput = form
+        ? form.querySelector('input[name="audit_date"]')
+        : null;
+
+    if (!dateInput) return;
+
+    var today = new Date();
+    var year = today.getFullYear();
+    var month = String(today.getMonth() + 1).padStart(2, '0');
+    var day = String(today.getDate()).padStart(2, '0');
+
+    // HTML date inputs require YYYY-MM-DD
+    dateInput.value = year + '-' + month + '-' + day;
+}
+
+
+// Audit Date calendar functionality
+var dateInput = form
+    ? form.querySelector('input[name="audit_date"]')
+    : null;
+
+if (dateInput) {
+    // Use the browser's native date picker
+    dateInput.type = 'date';
+
+    // Make the calendar field easy to recognize
+    dateInput.style.cursor = 'pointer';
+
+    // Open calendar on click where supported
+    dateInput.addEventListener('click', function () {
+        if (typeof dateInput.showPicker === 'function') {
+            try {
+                dateInput.showPicker();
+            } catch (error) {
+                // The browser may open the native picker normally.
+            }
+        }
+    });
+
+    // Initialize today's date if the field is empty
+    if (!dateInput.value) {
+        setTodayDate();
+    }
+}
+
+
+// Save 5S Audit form
+if (form && saveBtn) {
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        // Prevent duplicate submissions
+        if (saveBtn.disabled) {
+            return;
+        }
+
+        // Start spinner
+        saveBtn.disabled = true;
+
+        saveBtn.innerHTML =
+            '<span id="saveBtnText">Saving...</span> ' +
+            '<span id="saveBtnSpinner" style="' +
+            'display:inline-block;width:16px;height:16px;' +
+            'border:2px solid rgba(255,255,255,.35);' +
+            'border-top-color:#fff;border-radius:50%;' +
+            'animation:spin .8s linear infinite;"></span>';
+
+        if (saveStatus) {
+            saveStatus.textContent = '';
+            saveStatus.style.color = '';
+        }
+
+        var formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            },
+            body: formData
+        })
+        .then(function (response) {
+            return response.json().then(function (json) {
+                if (!response.ok || !json.ok) {
+                    var message =
+                        json.message ||
+                        (json.errors && json.errors.join('\n')) ||
+                        'Unable to save the audit. Please try again.';
+
+                    throw new Error(message);
+                }
+
+                return json;
+            });
+        })
+        .then(function (json) {
+            // Database save succeeded: stop spinner immediately
+            stopLoading();
+
+            if (saveStatus) {
+                saveStatus.textContent = 'Saved successfully!';
+                saveStatus.style.color = 'var(--success)';
+            }
+
+            // Display success popup
+            showFlash(
+                json.message ||
+                '5S audit check sheet saved successfully!',
+                'success'
+            );
+
+            // Clear form only after successful save
+            form.reset();
+
+            // Restore today's date after reset
+            setTodayDate();
+        })
+        .catch(function (err) {
+            // Stop spinner when saving fails
+            stopLoading();
+
+            if (saveStatus) {
+                saveStatus.textContent =
+                    'Save failed: ' +
+                    (err.message || 'Please try again.');
+
+                saveStatus.style.color = 'var(--danger)';
+            }
+
+            showFlash(
+                err.message || 'Save failed. Please try again.',
+                'error'
+            );
+        });
+    });
+}
+
+</script>
+{% endblock %}

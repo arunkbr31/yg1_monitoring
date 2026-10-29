@@ -3,6 +3,7 @@ import resend
 import threading
 import time
 import uuid
+import json
 from datetime import datetime, date, timedelta
 from functools import wraps
 from io import BytesIO
@@ -18,7 +19,7 @@ from flask_login import (
 from dotenv import load_dotenv
 
 from extensions import db
-from models import User, Rule, Audit, Alert, MailLog, NCR
+from models import User, Rule, Audit, Alert, MailLog, NCR, FiveSAudit
 from sqlalchemy import case
 
 
@@ -74,6 +75,74 @@ ZONAL_LEADERS = [
 STATUS_OPTIONS = ['open', 'closed']
 
 AUDIT_TYPES = ['5S Audit', 'HOD Audit']
+
+
+# 5S audit check sheet - identical format for every zone/section.
+FIVE_S_CHECKLIST = [
+    (
+        '1. Sort (Seiri) - Remove Unnecessary Items',
+        [
+            ('1-1-1', 'Red Tagging/Scrap tag', 'No unnecessary items are left or stored in the workplace.'),
+            ('1-1-2', 'Workstation Clearance', 'Are only the tools/materials necessary for the current job present at the machine?'),
+            ('1-1-3', 'Floor Clutter', 'Are the areas around machines free from unnecessary items, old machinery parts, toolings or excess raw material?'),
+            ('1-1-4', 'Document Control', 'Are old, revised, or non-essential production drawings, inspection reports, work instructions, checklists removed?'),
+        ],
+    ),
+    (
+        '2. Set in Order (Seiton) - Organize and Arrange',
+        [
+            ('2-1-1', 'Tool Organization', 'Are required toolings, instruments, wheels or wheel packs stored in labeled containers/racks or shadow boards at the point of use?'),
+            ('2-1-2', 'Workstation Layout', 'Are tools arranged in order of use to minimize operator motion?'),
+            ('2-1-3', 'Material Flow', 'Are raw materials, work-in-progress (WIP), and finished tools clearly segregated and labelled to avoid mixing?'),
+            ('2-1-4', 'Safety Accessibility', 'Are fire extinguishers, first-aid kits, and electrical panels easily accessible and not blocked by tooling or materials?'),
+            ('2-1-5', 'Floor Markings', 'Are aisles, walkways, and hazard zones clearly marked and respected?'),
+        ],
+    ),
+    (
+        '3. Shine (Seiso) - Clean and Inspect',
+        [
+            ('3-1-1', 'Machine & racks Cleanliness', 'Are all machines free of excess oil, swarf (metal shavings), and coolant buildup? Are racks, cabinets and shelves kept clean. Stored items, materials & products are kept clean'),
+            ('3-1-2', 'Cleaning Responsibilities', 'Is it clear who is responsible for cleaning each machine, workstation, and shared area?'),
+            ('3-1-3', 'Hazardous Materials', 'Are coolants, oils, and solvents stored properly and free from leaks?'),
+            ('3-1-4', 'Lighting and Visibility', 'Are light fixtures clean and working, ensuring adequate light for inspection?'),
+            ('3-1-5', 'Inspection Routine', 'Are daily cleaning routines combined with maintenance inspections to identify leaks, wear, or damaged parts?'),
+        ],
+    ),
+    (
+        '4. Standardize (Seiketsu) - Create Standards',
+        [
+            ('4-1-1', 'SOP Visibility', 'Are standard operating procedures, including cleaning schedules, posted at workstations?'),
+            ('4-1-2', 'Visual Controls', 'Are color-coding systems for tools or materials consistently applied?'),
+            ('4-1-3', 'Audit Frequency', 'Are regular 5S audits (Daily/weekly/monthly) scheduled and performed?'),
+            ('4-1-4', 'Measurement Tools', 'Are precision instruments (calipers, micrometers) stored according to a defined, protected standard?'),
+        ],
+    ),
+    (
+        '5. Sustain (Shitsuke) - Maintain and Improve',
+        [
+            ('5-1-1', 'Training', 'Are all employees trained on 5S procedures and understand their responsibilities?'),
+            ('5-1-2', 'Follow-up on Audits', 'Are the actions identified in the previous audit completed?'),
+            ('5-1-3', 'Employee Participation', 'Do employees participate in improvement ideas for their own workstations?'),
+            ('5-1-4', 'Culture', 'Is 5S treated as a daily habit rather than just an audit activity?'),
+        ],
+    ),
+    (
+        '6. Safety (6th S) - Often Integrated',
+        [
+            ('6-1-1', 'PPE Compliance', 'Are operators wearing proper PPE (safety glasses, hearing protection, gloves, mask) when handling tools and coolant?'),
+            ('6-1-2', 'Machine Guards', 'Are all guards and safety devices on grinding/cutting machines in place and functional?'),
+            ('6-1-3', 'Chemical Safety', 'Are MSDS (Material Safety Data Sheets) readily available for cutting oils and chemicals?'),
+        ],
+    ),
+]
+
+SCORING_SYSTEM = [
+    ('5', 'Excellent', 'Fully compliant, standard achieved.'),
+    ('4', 'Good', 'Minor issues present.'),
+    ('3', 'Average', 'Significant inconsistencies.'),
+    ('2', 'Poor', 'Major gaps, non-compliant.'),
+    ('1', 'Very Poor', 'No adherence.'),
+]
 
 
 def allowed_file(filename):
@@ -356,6 +425,17 @@ def run_migrations():
                 conn.execute(text("ALTER TABLE audit ADD COLUMN audit_type VARCHAR(20) DEFAULT '5S Audit'"))
             print('[OK] Migration: added audit.audit_type column')
 
+    # Ensure the 5S audit check sheet table has the columns used by FiveSAudit.
+    if 'five_s_audit' in inspector.get_table_names():
+        five_s_cols = {c['name'] for c in inspector.get_columns('five_s_audit')}
+        with db.engine.begin() as conn:
+            if 'responses' not in five_s_cols:
+                conn.execute(text("ALTER TABLE five_s_audit ADD COLUMN responses TEXT DEFAULT '{}'"))
+                print('[OK] Migration: added five_s_audit.responses column')
+            if 'percentage' not in five_s_cols:
+                conn.execute(text("ALTER TABLE five_s_audit ADD COLUMN percentage FLOAT DEFAULT 0"))
+                print('[OK] Migration: added five_s_audit.percentage column')
+
 
 def get_status_counts(audit_type=None):
     query = Audit.query
@@ -540,22 +620,197 @@ def five_s_audit():
     )
 
 
+@app.route('/5s-audit-check-sheet/<int:record_id>')
+@login_required
+def five_s_check_sheet_detail(record_id):
+    record = db.session.get(FiveSAudit, record_id)
+    if not record:
+        flash('5S audit record not found.', 'error')
+        return redirect(url_for('five_s_audit_summary'))
+    responses = json.loads(record.responses or '{}')
+    checklist = FIVE_S_CHECKLIST
+    scoring = SCORING_SYSTEM
+    return render_template(
+        'five_s_check_sheet_detail.html',
+        record=record,
+        responses=responses,
+        checklist=checklist,
+        scoring=scoring,
+    )
+
+
 @app.route('/5s-audit-summary')
 @login_required
 def five_s_audit_summary():
-    """5S Audit Summary - shows the full audit record table for 5S audits."""
+    """5S Audit Summary - lists saved 5S audit check sheets."""
     hod_query = request.args.get('hod', '').strip()
-    query = Audit.query.filter(Audit.audit_type == '5S Audit').order_by(Audit.created_at.desc())
-    all_audits = []
+    query = FiveSAudit.query.order_by(FiveSAudit.created_at.desc())
+    all_audits = query.all()
     return render_template(
         'five_s_audit_summary.html',
         audits=all_audits,
-        plants=PLANTS,
         zones=ZONES,
-        zonal_leaders=ZONAL_LEADERS,
-        audit_types=AUDIT_TYPES,
         hod_query=hod_query,
     )
+
+
+@app.route('/5s-audit-check-sheet')
+@login_required
+def five_s_check_sheet():
+    """5S Audit Check Sheet form - identical format for every zone."""
+    return render_template(
+        'five_s_check_sheet.html',
+        zones=ZONES,
+        checklist=FIVE_S_CHECKLIST,
+        scoring=SCORING_SYSTEM,
+        now=datetime.utcnow(),
+    )
+
+
+
+@app.route('/5s-audit-check-sheet/save', methods=['POST'])
+@login_required
+def save_five_s_check_sheet():
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    try:
+        # Read form fields
+        audit_date = parse_date(request.form.get('audit_date', ''))
+        auditor = request.form.get('auditor', '').strip()
+        plant = request.form.get('plant', '').strip()
+        zone = request.form.get('zone', '').strip()
+        auditee = request.form.get('auditee', '').strip()
+
+        # Validate required fields
+        errors = []
+
+        if not audit_date:
+            errors.append('Date is required.')
+
+        if not auditor:
+            errors.append('Auditor is required.')
+
+        if zone not in ZONES:
+            errors.append('Please select a valid Zone/Section.')
+
+        if not auditee:
+            errors.append('Auditee is required.')
+
+        if errors:
+            if is_ajax:
+                return jsonify({
+                    'ok': False,
+                    'message': 'Please correct the following errors.',
+                    'errors': errors
+                }), 400
+
+            for error in errors:
+                flash(error, 'error')
+
+            return redirect(url_for('five_s_check_sheet'))
+
+        # Collect checklist responses and calculate score
+        responses = {}
+        total_score = 0
+        max_score = 0
+
+        for section_name, items in FIVE_S_CHECKLIST:
+            for item_id, item_name, question in items:
+                score_raw = request.form.get(
+                    f'score_{item_id}', ''
+                ).strip()
+
+                score = int(score_raw) if score_raw.isdigit() else 0
+
+                # Keep the score within the expected 0–5 range
+                if score < 0 or score > 5:
+                    errors.append(
+                        f'Invalid score for checklist item: {item_name}'
+                    )
+                    continue
+
+                remarks = request.form.get(
+                    f'remark_{item_id}', ''
+                ).strip()
+
+                responses[item_id] = {
+                    'score': score,
+                    'remarks': remarks
+                }
+
+                total_score += score
+                max_score += 5
+
+        if errors:
+            if is_ajax:
+                return jsonify({
+                    'ok': False,
+                    'message': 'Please correct the invalid checklist scores.',
+                    'errors': errors
+                }), 400
+
+            for error in errors:
+                flash(error, 'error')
+
+            return redirect(url_for('five_s_check_sheet'))
+
+        # Calculate percentage
+        percentage = (
+            round((total_score / max_score) * 100, 1)
+            if max_score else 0.0
+        )
+
+        # Create database record
+        record = FiveSAudit(
+            audit_date=audit_date,
+            plant=plant,
+            auditor=auditor,
+            zone=zone,
+            status='open',
+            scores='',
+            remarks='',
+            auditee=auditee,
+            responses=json.dumps(responses),
+            total_score=float(total_score),
+            max_score=float(max_score),
+            percentage=percentage,
+        )
+
+        db.session.add(record)
+
+        # Commit must succeed before returning a success response
+        db.session.commit()
+
+        message = '5S audit check sheet saved successfully!'
+
+        if is_ajax:
+            return jsonify({
+                'ok': True,
+                'message': message,
+                'id': record.id
+            }), 200
+
+        flash(message, 'success')
+        return redirect(url_for('five_s_audit_summary'))
+
+    except Exception:
+        # Undo any incomplete database transaction
+        db.session.rollback()
+
+        if is_ajax:
+            return jsonify({
+                'ok': False,
+                'message': (
+                    'Unable to save the 5S audit. '
+                    'Please try again.'
+                )
+            }), 500
+
+        flash(
+            'Unable to save the 5S audit. Please try again.',
+            'error'
+        )
+        return redirect(url_for('five_s_check_sheet'))
 
 
 @app.route('/process-audit')
