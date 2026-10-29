@@ -607,6 +607,7 @@ def five_s_audit():
     audits = []
     alerts = Alert.query.order_by(Alert.sent_at.desc()).limit(10).all()
     counts = get_status_counts(audit_type='5S Audit')
+    zone_query = request.args.get('zone', '').strip()
 
     return render_template(
         'five_s_audit.html',
@@ -616,6 +617,8 @@ def five_s_audit():
         alert_counts=get_alert_counts(audit_type='5S Audit'),
         audit_types=AUDIT_TYPES,
         current_audit_type='5S Audit',
+        zones=ZONES,
+        zone_query=zone_query,
         now=datetime.utcnow()
     )
 
@@ -644,13 +647,17 @@ def five_s_check_sheet_detail(record_id):
 def five_s_audit_summary():
     """5S Audit Summary - lists saved 5S audit check sheets."""
     hod_query = request.args.get('hod', '').strip()
+    zone_query = request.args.get('zone', '').strip()
     query = FiveSAudit.query.order_by(FiveSAudit.created_at.desc())
+    if zone_query:
+        query = query.filter(FiveSAudit.zone == zone_query)
     all_audits = query.all()
     return render_template(
         'five_s_audit_summary.html',
         audits=all_audits,
         zones=ZONES,
         hod_query=hod_query,
+        zone_query=zone_query,
     )
 
 
@@ -1168,6 +1175,81 @@ def charts_data():
         'plant2_stats': plant2_stats,
         'plant3_stats': plant3_stats,
         'monthly_stats': monthly_stats,
+    })
+
+
+@app.route('/api/charts/5s')
+@login_required
+def five_s_charts_data():
+    """Chart data for the 5S Audit dashboard.
+
+    Returns month-wise totals (open/closed/total) and zone-wise totals.
+    A `zone` query parameter filters the month-wise series to that zone only.
+    """
+    selected_zone = request.args.get('zone', '').strip()
+
+    base = FiveSAudit.query
+
+    # Zone-wise totals (always unfiltered so the selector shows every zone)
+    zone_results = db.session.query(
+        FiveSAudit.zone,
+        db.func.count(FiveSAudit.id).label('total'),
+        db.func.sum(db.case((FiveSAudit.percentage >= 70, 1), else_=0)).label('good'),
+        db.func.sum(db.case((FiveSAudit.percentage < 70, 1), else_=0)).label('poor'),
+    ).group_by(FiveSAudit.zone).order_by(FiveSAudit.zone).all()
+
+    zone_stats = []
+    for r in zone_results:
+        zone_stats.append({
+            'zone': r.zone or 'Unknown',
+            'total': r.total or 0,
+            'good': r.good or 0,
+            'poor': r.poor or 0,
+        })
+
+    # Month-wise totals for the current year
+    today = date.today()
+    month_query = db.session.query(
+        db.func.strftime('%Y-%m', FiveSAudit.audit_date).label('month'),
+        db.func.count(FiveSAudit.id).label('total'),
+        db.func.sum(db.case((FiveSAudit.percentage >= 70, 1), else_=0)).label('good'),
+        db.func.sum(db.case((FiveSAudit.percentage < 70, 1), else_=0)).label('poor'),
+    ).filter(FiveSAudit.audit_date >= date(today.year, 1, 1))
+
+    if selected_zone:
+        month_query = month_query.filter(FiveSAudit.zone == selected_zone)
+
+    month_results = month_query.group_by('month').order_by('month').all()
+
+    monthly_map = {}
+    for r in month_results:
+        monthly_map[r.month] = {
+            'total': r.total or 0,
+            'good': r.good or 0,
+            'poor': r.poor or 0,
+        }
+
+    monthly_stats = []
+    current = date(today.year, 1, 1)
+    while current <= today:
+        month_key = current.strftime('%Y-%m')
+        month_label = current.strftime('%b %Y')
+        stats = monthly_map.get(month_key, {'total': 0, 'good': 0, 'poor': 0})
+        monthly_stats.append({
+            'month': month_label,
+            'total': stats['total'],
+            'good': stats['good'],
+            'poor': stats['poor'],
+        })
+        if current.month == 12:
+            current = date(current.year + 1, 1, 1)
+        else:
+            current = date(current.year, current.month + 1, 1)
+
+    return jsonify({
+        'zone_stats': zone_stats,
+        'monthly_stats': monthly_stats,
+        'selected_zone': selected_zone,
     })
 
 

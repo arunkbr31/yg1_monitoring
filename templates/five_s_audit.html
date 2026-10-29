@@ -30,11 +30,119 @@
         {% endwith %}
 
         <div class="card">
-            <div class="empty-state">
-                <div class="icon">📋</div>
-                <p>5S Audit data will be shown here.</p>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+                <h3 style="margin:0;">5S Audit Monthly Trend</h3>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <label for="zone_select" style="font-size:13px; font-weight:600; color:var(--text-light);">Select Zone:</label>
+                    <select id="zone_select" style="padding:8px 12px; border:1.5px solid var(--gray-border); border-radius:8px; font-size:13px; font-family:inherit; background:white;">
+                        <option value="">All Zones</option>
+                        {% for z in zones %}
+                        <option value="{{ z }}" {% if z == zone_query %}selected{% endif %}>{{ z }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div style="position:relative; height:320px;">
+                <canvas id="fiveSMonthlyChart"></canvas>
+            </div>
+            <div id="fiveSNoDataMsg" style="display:none; text-align:center; padding:40px; color:var(--text-light);">
+                <div style="font-size:40px; margin-bottom:8px;">📊</div>
+                <p>No 5S audit records found for the selected zone in the current year.</p>
             </div>
         </div>
     </main>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+YG1.onReady(function() {
+    let chartInstance = null;
+    const noDataMsg = document.getElementById('fiveSNoDataMsg');
+
+    function renderChart(monthlyStats) {
+        const canvas = document.getElementById('fiveSMonthlyChart');
+        const hasData = monthlyStats.some(m => m.total > 0);
+
+        if (!hasData) {
+            canvas.style.display = 'none';
+            noDataMsg.style.display = 'block';
+            if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+            return;
+        }
+
+        canvas.style.display = 'block';
+        noDataMsg.style.display = 'none';
+
+        if (chartInstance) { chartInstance.destroy(); }
+
+        const monthLabels = monthlyStats.map(m => m.month);
+        const monthGood = monthlyStats.map(m => m.good);
+        const monthPoor = monthlyStats.map(m => m.poor);
+
+        chartInstance = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: monthLabels,
+                datasets: [
+                    {
+                        label: 'Good (>=70%)',
+                        data: monthGood,
+                        backgroundColor: '#16a34a',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Poor (<70%)',
+                        data: monthPoor,
+                        backgroundColor: '#dc2626',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 },
+                        title: { display: true, text: 'Score Count (up to 100)' },
+                        max: 100
+                    }
+                },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': ' + ctx.parsed.y + ' score';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function fetchAndRender(zone) {
+        let url = '{{ url_for("five_s_charts_data") }}';
+        if (zone) { url += '?zone=' + encodeURIComponent(zone); }
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => renderChart(data.monthly_stats))
+            .catch(err => console.error('5S chart data error:', err));
+    }
+
+    // Initial load
+    fetchAndRender('{{ zone_query }}');
+
+    // Zone change handler
+    document.getElementById('zone_select').addEventListener('change', function() {
+        fetchAndRender(this.value);
+    });
+});
+</script>
 {% endblock %}
