@@ -90,12 +90,7 @@
                             </td>
 
                             <td data-label="Zonal Leader">
-                                <select form="audit-new" name="zonal_leader" id="f-zonal_leader" class="cell-input">
-                                    <option value="">-- Select --</option>
-                                    {% for zl in zonal_leaders %}
-                                    <option value="{{ zl }}">{{ zl }}</option>
-                                    {% endfor %}
-                                </select>
+                                <input type="text" form="audit-new" name="zonal_leader" id="f-zonal_leader" class="cell-input" placeholder="Zonal Leader" readonly>
                             </td>
 
                             <td data-label="NC Category">
@@ -111,11 +106,11 @@
                             </td>
 
                             <td data-label="Responsible HOD">
-                                <input type="text" form="audit-new" name="responsible_hod" id="f-responsible_hod" class="cell-input" placeholder="HOD name">
+                                <input type="text" form="audit-new" name="responsible_hod" id="f-responsible_hod" class="cell-input" placeholder="HOD name" readonly>
                             </td>
 
                             <td data-label="Responsible Email">
-                                <input type="email" form="audit-new" name="responsible_email" id="f-responsible_email" class="cell-input" placeholder="email@company.com">
+                                <input type="email" form="audit-new" name="responsible_email" id="f-responsible_email" class="cell-input" placeholder="email@company.com" readonly>
                             </td>
 
                             <td data-label="Target Date">
@@ -288,6 +283,49 @@ YG1.onReady(function() {
         dateFormat: 'd-m-Y',
         allowInput: true
     });
+
+    const zoneMap = {
+        'Zone 1': { leader: 'Mr. Jigar Paramar', hod: 'Mr. Jigar Paramar', email: 'jigar.parmar@yg1.solutions' },
+        'Zone 2': { leader: 'Mr. Srikanth S', hod: 'Mr. Srikanth S', email: 'srikanth@yg1.solutions' },
+        'Zone 3': { leader: 'Mr. Vishwanath shetty', hod: 'Mr. Vishwanath shetty', email: 'vishwanath.shetty@yg1.solutions' },
+        'Zone 4': { leader: 'Mr. Jinesh.R', hod: 'Mr. Jinesh.R', email: 'Jinesh.R@yg1.solutions' },
+        'Zone 5': { leader: 'Mr. Vijaymoorthy', hod: 'Mr. Vijaymoorthy', email: 'vijaymoorthy@yg1.solutions' },
+        'Zone 6': { leader: 'Mr. Pavankumar', hod: 'Mr. Pavankumar', email: 'pavankumar.p@yg1.solutions' },
+        'Zone 7': { leader: 'Mr. Avinash P', hod: 'Mr. Avinash P', email: 'avinashp@yg1.solutions' },
+        'Zone 8': { leader: 'Mr. Srikanth S', hod: 'Mr. Srikanth S', email: 'srikanth@yg1.solutions' },
+        'Zone 9': { leader: 'Mr. Jinesh.R', hod: 'Mr. Jinesh.R', email: 'Jinesh.R@yg1.solutions' },
+        'Zone 10': { leader: 'Mr. Ajay & Mr. Darmachari', hod: 'Mr. Ajay & Mr. Darmachari', email: 'Ajay.C@yg1.solutions-' },
+        'Zone 11': { leader: 'Mr. Ajay & Mr. Reguram', hod: 'Mr. Ajay & Mr. Reguram', email: 'Ajay.C@yg1.solutions' },
+        'Zone 12': { leader: 'Mr. Jigar Paramar', hod: 'Mr. Jigar Paramar', email: 'jigar.parmar@yg1.solutions' },
+        'Zone 13': { leader: 'Mr. Vijaymoorthy', hod: 'Mr. Vijaymoorthy', email: 'vijaymoorthy@yg1.solutions' },
+        'Zone 14': { leader: 'Mr. Vishwanath shetty', hod: 'Mr. Vishwanath shetty', email: 'vishwanath.shetty@yg1.solutions' },
+        'Zone 15': { leader: 'Mr. Sethuraman', hod: 'Mr. Sethuraman', email: 'sethuraman@yg1.solutions' },
+        'Zone 16': { leader: 'Mr. Surendra', hod: 'Mr. Surendra', email: 'surendra.kumar@yg1.solutions' },
+        'Zone 17': { leader: 'Mr. Vishwanath shetty', hod: 'Mr. Vishwanath shetty', email: 'vishwanath.shetty@yg1.solutions' },
+        'Zone 18': { leader: 'Mr. Vishwanath shetty', hod: 'Mr. Vishwanath shetty', email: 'vishwanath.shetty@yg1.solutions' },
+        'Zone 19': { leader: 'Mr. Vishwanath shetty', hod: 'Mr. Vishwanath shetty', email: 'vishwanath.shetty@yg1.solutions' },
+        'Zone 20': { leader: 'Mr. Rajendra', hod: 'Mr. Rajendra', email: 'Rajendra.kumar@yg1.solutions' }
+    };
+
+    const zoneSelect = document.getElementById('f-zone');
+    const leaderInput = document.getElementById('f-zonal_leader');
+    const hodInput = document.getElementById('f-responsible_hod');
+    const emailInput = document.getElementById('f-responsible_email');
+
+    if (zoneSelect) {
+        zoneSelect.addEventListener('change', function() {
+            const data = zoneMap[this.value];
+            if (data) {
+                if (leaderInput) leaderInput.value = data.leader;
+                if (hodInput) hodInput.value = data.hod;
+                if (emailInput) emailInput.value = data.email;
+            } else {
+                if (leaderInput) leaderInput.value = '';
+                if (hodInput) hodInput.value = '';
+                if (emailInput) emailInput.value = '';
+            }
+        });
+    }
 });
 
 function showFlash(message, category) {
