@@ -1080,16 +1080,20 @@ def charts_data():
     audit_type = request.args.get('audit_type', '5S Audit')
     if audit_type not in AUDIT_TYPES:
         audit_type = '5S Audit'
+    year = request.args.get('year', type=int)
     counts = get_status_counts(audit_type=audit_type)
 
     base = Audit.query.filter(Audit.audit_type == audit_type)
 
-    plant1_results = db.session.query(
+    plant1_query = db.session.query(
         Audit.responsible_hod,
         db.func.count(Audit.id).label('total'),
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
         db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
-    ).filter(Audit.ygct_plant1 != '').filter(Audit.audit_type == audit_type).group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
+    ).filter(Audit.ygct_plant1 != '').filter(Audit.audit_type == audit_type)
+    if year:
+        plant1_query = plant1_query.filter(db.extract('year', Audit.audit_date) == year)
+    plant1_results = plant1_query.group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
 
     plant1_stats = []
     for r in plant1_results:
@@ -1100,12 +1104,15 @@ def charts_data():
             'closed': r.closed or 0
         })
 
-    plant2_results = db.session.query(
+    plant2_query = db.session.query(
         Audit.responsible_hod,
         db.func.count(Audit.id).label('total'),
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
         db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
-    ).filter(Audit.ygct_plant2 != '').filter(Audit.audit_type == audit_type).group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
+    ).filter(Audit.ygct_plant2 != '').filter(Audit.audit_type == audit_type)
+    if year:
+        plant2_query = plant2_query.filter(db.extract('year', Audit.audit_date) == year)
+    plant2_results = plant2_query.group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
 
     plant2_stats = []
     for r in plant2_results:
@@ -1116,12 +1123,15 @@ def charts_data():
             'closed': r.closed or 0
         })
 
-    plant3_results = db.session.query(
+    plant3_query = db.session.query(
         Audit.responsible_hod,
         db.func.count(Audit.id).label('total'),
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
         db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
-    ).filter(Audit.ygct_plant3 != '').filter(Audit.audit_type == audit_type).group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
+    ).filter(Audit.ygct_plant3 != '').filter(Audit.audit_type == audit_type)
+    if year:
+        plant3_query = plant3_query.filter(db.extract('year', Audit.audit_date) == year)
+    plant3_results = plant3_query.group_by(Audit.responsible_hod).order_by(Audit.responsible_hod).all()
 
     plant3_stats = []
     for r in plant3_results:
@@ -1133,13 +1143,14 @@ def charts_data():
         })
 
     today = date.today()
+    target_year = year if year else today.year
     monthly_results = db.session.query(
         db.func.strftime('%Y-%m', Audit.audit_date).label('month'),
         db.func.count(Audit.id).label('total'),
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
         db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
     ).filter(
-        Audit.audit_date >= date(today.year, 1, 1),
+        db.extract('year', Audit.audit_date) == target_year,
         Audit.audit_type == audit_type,
     ).group_by('month').order_by('month').all()
 
@@ -1151,10 +1162,11 @@ def charts_data():
             'closed': r.closed or 0
         }
 
-    start_month = date(today.year, 1, 1)
+    start_month = date(target_year, 1, 1)
+    end_month = date(today.year, today.month, 1) if target_year == today.year else date(target_year, 12, 1)
     monthly_stats = []
     current = start_month
-    while current <= today:
+    while current <= end_month:
         month_key = current.strftime('%Y-%m')
         month_label = current.strftime('%b %Y')
         stats = monthly_map.get(month_key, {'total': 0, 'open': 0, 'closed': 0})
@@ -1169,12 +1181,17 @@ def charts_data():
         else:
             current = date(current.year, current.month + 1, 1)
 
+    years_query = db.session.query(db.extract('year', Audit.audit_date).label('year')).filter(Audit.audit_type == audit_type).distinct().order_by(db.extract('year', Audit.audit_date).desc())
+    years = [int(r.year) for r in years_query.all() if r.year]
+
     return jsonify({
         'counts': counts,
         'plant1_stats': plant1_stats,
         'plant2_stats': plant2_stats,
         'plant3_stats': plant3_stats,
         'monthly_stats': monthly_stats,
+        'years': years,
+        'selected_year': target_year,
     })
 
 

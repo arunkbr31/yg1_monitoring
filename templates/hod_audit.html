@@ -47,21 +47,48 @@
             </div>
         </div>
 
-         <div class="charts-grid">
+        <div class="charts-grid">
             <div class="chart-box">
-                <h3>📅 HOD Audit Non-Conformity Status - Plant1</h3>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                    <h3 style="margin:0;">📅 5s HOD Audit  Status - Plant 1 (YGCT)</h3>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:12px; color:#475569;">Year</span>
+                        <select id="yearFilterPlant1" style="padding:4px 8px; border-radius:4px; border:1px solid #cbd5e1;"></select>
+                    </div>
+                </div>
                 <canvas id="zoneChart"></canvas>
             </div>
             <div class="chart-box">
-                <h3>📅 HOD Audit Non-Conformity Status - Plant2</h3>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                    <h3 style="margin:0;">📅 5s HOD Audit  Status - Plant 2 (YGCT)</h3>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:12px; color:#475569;">Year</span>
+                        <select id="yearFilterPlant2" style="padding:4px 8px; border-radius:4px; border:1px solid #cbd5e1;"></select>
+                    </div>
+                </div>
                 <canvas id="zoneChart2"></canvas>
             </div>
             <div class="chart-box">
-                <h3>📅 HOD Audit Non-Conformity Status - Plant3</h3>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                    <h3 style="margin:0;">📅 5s HOD Audit  Status - Plant 3 (YGIP)</h3>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:12px; color:#475569;">Year</span>
+                        <select id="yearFilterPlant3" style="padding:4px 8px; border-radius:4px; border:1px solid #cbd5e1;"></select>
+                    </div>
+                </div>
                 <canvas id="zoneChart3"></canvas>
             </div>
-            <div class="chart-box">
-                <h3>📈 Current Year Trend</h3>
+        </div>
+
+        <div class="chart-box" style="margin-bottom:24px; height:460px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                <h3 style="margin:0;">📈 YG1 INDIA 5s Hod Audit Status</h3>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:12px; color:#475569;">Year</span>
+                    <select id="yearFilterIndia" style="padding:4px 8px; border-radius:4px; border:1px solid #cbd5e1;"></select>
+                </div>
+            </div>
+            <div style="height:400px; position:relative;">
                 <canvas id="yearlyChart"></canvas>
             </div>
         </div>
@@ -119,47 +146,182 @@
 {% block scripts %}
 <script>
 YG1.onReady(function() {
-    fetch('{{ url_for("charts_data") }}?audit_type=HOD Audit')
-        .then(res => res.json())
-        .then(data => {
-            const createPlantChart = function(canvasId, stats) {
-                const labels = stats.map(z => z.hod);
-                new Chart(document.getElementById(canvasId), {
+    let chart1 = null, chart2 = null, chart3 = null, yearlyChart = null;
+    const fetchAndRender = function(year) {
+        let url = '{{ url_for("charts_data") }}?audit_type=HOD Audit';
+        if (year) url += '&year=' + year;
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                // Populate year filters
+                const years = data.years || [];
+                const currentYear = data.selected_year;
+                ['yearFilterPlant1', 'yearFilterPlant2', 'yearFilterPlant3', 'yearFilterIndia'].forEach(selId => {
+                    const sel = document.getElementById(selId);
+                    if (!sel) return;
+                    sel.innerHTML = '';
+                    years.forEach(y => {
+                        const opt = document.createElement('option');
+                        opt.value = y;
+                        opt.textContent = y;
+                        if (y == currentYear) opt.selected = true;
+                        sel.appendChild(opt);
+                    });
+                    sel.onchange = function() {
+                        fetchAndRender(this.value);
+                    };
+                });
+
+                const createPlantChart = function(canvasId, stats, existingChart) {
+                    if (existingChart) {
+                        existingChart.destroy();
+                    }
+                    const labels = stats.map(z => z.hod);
+                    const chart = new Chart(document.getElementById(canvasId), {
+                        type: 'bar',
+                        plugins: [{
+                            id: 'pctLabels',
+                            afterDatasetsDraw(chart) {
+                                const ctx = chart.ctx;
+                                ctx.save();
+                                // Show closed percentage centered on closed bar (green)
+                                const metaClosed = chart.getDatasetMeta(2);
+                                metaClosed.data.forEach((bar, i) => {
+                                    const s = stats[i];
+                                    const t = s.total || 0;
+                                    if (t === 0) return;
+                                    const c = (s.closed / t * 100).toFixed(0);
+                                    if (parseInt(c) === 0) return;
+                                    ctx.fillStyle = '#ffffff';
+                                    ctx.font = 'bold 11px sans-serif';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(c + '%', bar.x, bar.y + bar.height / 2);
+                                });
+                                // Show open percentage centered on open bar (red)
+                                const metaOpen = chart.getDatasetMeta(1);
+                                metaOpen.data.forEach((bar, i) => {
+                                    const s = stats[i];
+                                    const t = s.total || 0;
+                                    if (t === 0) return;
+                                    const o = (s.open / t * 100).toFixed(0);
+                                    if (parseInt(o) === 0) return;
+                                    ctx.fillStyle = '#ffffff';
+                                    ctx.font = 'bold 11px sans-serif';
+                                    ctx.textAlign = 'center';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(o + '%', bar.x, bar.y + bar.height / 2);
+                                });
+                                ctx.restore();
+                            }
+                        }],
+                        data: {
+                            labels: labels,
+                            datasets: [
+                                {
+                                    label: 'Total Observations',
+                                    data: stats.map(z => z.total),
+                                    backgroundColor: '#1e3a8a',
+                                    borderRadius: 4
+                                },
+                                {
+                                    label: 'Open',
+                                    data: stats.map(z => z.open),
+                                    backgroundColor: '#dc2626',
+                                    borderRadius: 4
+                                },
+                                {
+                                    label: 'Closed',
+                                    data: stats.map(z => z.closed),
+                                    backgroundColor: '#16a34a',
+                                    borderRadius: 4
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: { beginAtZero: true, ticks: { precision: 0 }, stacked: true },
+                                x: { stacked: true }
+                            },
+                             plugins: {
+                                 legend: { position: 'bottom' },
+                                 tooltip: {
+                                     mode: 'index',
+                                     intersect: false
+                                 }
+                             }
+                        }
+                    });
+                    return chart;
+                };
+
+                chart1 = createPlantChart('zoneChart', data.plant1_stats, chart1);
+                chart2 = createPlantChart('zoneChart2', data.plant2_stats, chart2);
+                chart3 = createPlantChart('zoneChart3', data.plant3_stats, chart3);
+
+                const monthlyTrend = data.monthly_stats;
+                const monthLabels = monthlyTrend.map(m => m.month);
+                const monthTotal = monthlyTrend.map(m => m.total);
+                const monthOpen = monthlyTrend.map(m => m.open);
+                const monthClosed = monthlyTrend.map(m => m.closed);
+
+                if (yearlyChart) {
+                    yearlyChart.destroy();
+                }
+                yearlyChart = new Chart(document.getElementById('yearlyChart'), {
                     type: 'bar',
                     plugins: [{
-                        id: 'closedPct',
+                        id: 'pctLabelsYear',
                         afterDatasetsDraw(chart) {
                             const ctx = chart.ctx;
-                            const meta = chart.getDatasetMeta(2);
-                            meta.data.forEach((bar, i) => {
-                                const s = stats[i];
-                                const t = s.total || 0;
-                                const c = t ? (s.closed / t * 100).toFixed(0) : 0;
+                            ctx.save();
+                            const metaClosed = chart.getDatasetMeta(2);
+                            metaClosed.data.forEach((bar, i) => {
+                                const total = monthTotal[i] || 0;
+                                if (total === 0) return;
+                                const c = (monthClosed[i] / total * 100).toFixed(0);
+                                if (parseInt(c) === 0) return;
                                 ctx.fillStyle = '#16a34a';
-                                ctx.font = 'bold 11px sans-serif';
+                                ctx.font = 'bold 10px sans-serif';
                                 ctx.textAlign = 'center';
-                                ctx.fillText(c + '%', bar.x, bar.y - 4);
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(c + '%', bar.x, bar.y - 8);
                             });
+                            const metaOpen = chart.getDatasetMeta(1);
+                            metaOpen.data.forEach((bar, i) => {
+                                const total = monthTotal[i] || 0;
+                                if (total === 0) return;
+                                const o = (monthOpen[i] / total * 100).toFixed(0);
+                                if (parseInt(o) === 0) return;
+                                ctx.fillStyle = '#dc2626';
+                                ctx.font = 'bold 10px sans-serif';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(o + '%', bar.x, bar.y - 8);
+                            });
+                            ctx.restore();
                         }
                     }],
                     data: {
-                        labels: labels,
+                        labels: monthLabels,
                         datasets: [
                             {
                                 label: 'Total Observations',
-                                data: stats.map(z => z.total),
+                                data: monthTotal,
                                 backgroundColor: '#1e3a8a',
                                 borderRadius: 4
                             },
                             {
                                 label: 'Open',
-                                data: stats.map(z => z.open),
+                                data: monthOpen,
                                 backgroundColor: '#dc2626',
                                 borderRadius: 4
                             },
                             {
                                 label: 'Closed',
-                                data: stats.map(z => z.closed),
+                                data: monthClosed,
                                 backgroundColor: '#16a34a',
                                 borderRadius: 4
                             }
@@ -168,70 +330,22 @@ YG1.onReady(function() {
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        scales: {
-                            y: { beginAtZero: true, ticks: { precision: 0 }, stacked: true },
-                            x: { stacked: true }
+                        layout: {
+                            padding: { top: 32, right: 14, left: 14, bottom: 10 }
                         },
-                         plugins: {
-                             legend: { position: 'bottom' },
-                             tooltip: {
-                                 mode: 'index',
-                                 intersect: false
-                             }
-                         }
+                        scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0 } }
+                        },
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
                     }
                 });
-            };
 
-            createPlantChart('zoneChart', data.plant1_stats);
-            createPlantChart('zoneChart2', data.plant2_stats);
-            createPlantChart('zoneChart3', data.plant3_stats);
-
-            const monthlyTrend = data.monthly_stats;
-            const monthLabels = monthlyTrend.map(m => m.month);
-            const monthTotal = monthlyTrend.map(m => m.total);
-            const monthOpen = monthlyTrend.map(m => m.open);
-            const monthClosed = monthlyTrend.map(m => m.closed);
-
-            new Chart(document.getElementById('yearlyChart'), {
-                type: 'bar',
-                data: {
-                    labels: monthLabels,
-                    datasets: [
-                        {
-                            label: 'Total Observations',
-                            data: monthTotal,
-                            backgroundColor: '#1e3a8a',
-                            borderRadius: 4
-                        },
-                        {
-                            label: 'Open',
-                            data: monthOpen,
-                            backgroundColor: '#dc2626',
-                            borderRadius: 4
-                        },
-                        {
-                            label: 'Closed',
-                            data: monthClosed,
-                            backgroundColor: '#16a34a',
-                            borderRadius: 4
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, ticks: { precision: 0 } }
-                    },
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
-                }
-            });
-
-        })
-        .catch(err => console.error('Chart data error:', err));
+            })
+            .catch(err => console.error('Chart data error:', err));
+    };
+    fetchAndRender();
 });
 </script>
 {% endblock %}
