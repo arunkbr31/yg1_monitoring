@@ -846,13 +846,14 @@
                 background .3s ease;
         }
         .sidebar nav .nav-group.open > .nav-submenu {
-            max-height: 280px;
+            max-height: 1200px;
             opacity: 1;
             margin: 5px 0 7px;
             padding: 6px 0 6px 14px;
             background: rgba(255,255,255,.055);
             border-left: 2px solid rgba(59,130,246,.55);
             border-radius: 0 12px 12px 0;
+            overflow: visible;
         }
         .sidebar nav .nav-submenu a { font-size: 13.5px; padding: 9px 12px; margin-bottom: 2px; }
         .sidebar nav .nav-submenu a .icon { flex: 0 0 18px; width: 18px; height: 18px; }
@@ -908,13 +909,14 @@
         }
         html.sidebar-icononly .sidebar nav .nav-group.open > .nav-submenu,
         html.sidebar-icononly .sidebar nav .nav-group:hover > .nav-submenu {
-            max-height: 200px;
+            max-height: 1200px;
             opacity: 1;
             margin: 4px 0 6px;
             padding: 4px 0;
             background: rgba(255,255,255,.055);
             border-left: 0;
             border-radius: 12px;
+            overflow: visible;
         }
         html.sidebar-icononly .sidebar nav .nav-submenu a {
             justify-content: center;
@@ -1052,14 +1054,34 @@
         }
         tbody tr:nth-child(even) { background: #fafbfc; }
 
-        /* HOD Summary - let table scroll horizontally within itself, remove page-level vertical scroll */
+        /* Flatpickr */
         .flatpickr-calendar {
             z-index: 10010 !important;
         }
-        .hod-summary-page .main { overflow: hidden !important; }
-        .hod-summary-page .page-header { margin-bottom: 16px; }
-        .hod-summary-page .card { margin-bottom: 0; }
-        .hod-summary-page .table-scroll { overflow-x: auto; overflow-y: auto; }
+
+        /* HOD Audit Summary - fixed page, scroll only inside table */
+        body.hod-audit-summary-page,
+        .hod-audit-summary-page {
+            overflow: hidden !important;
+        }
+        .hod-audit-summary-page .layout {
+            height: 100vh;
+            overflow: hidden;
+        }
+        .hod-audit-summary-page .main {
+            overflow: hidden !important;
+        }
+        .hod-audit-summary-page .card {
+            margin-bottom: 0;
+        }
+        .hod-audit-summary-page .table-scroll {
+            overflow-x: auto !important;
+            overflow-y: auto !important;
+        }
+
+        /* HOD Summary - let table scroll horizontally within itself, remove page-level vertical scroll */
+        .hod-summary-page .main { overflow-y: auto; }
+        .hod-summary-page .table-scroll { overflow-x: auto; }
 
         /* HOD Summary table enhancements */
         .table-scroll table { box-shadow: 0 1px 3px rgba(0,0,0,.04); }

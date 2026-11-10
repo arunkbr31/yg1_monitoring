@@ -823,22 +823,50 @@ def save_five_s_check_sheet():
 @app.route('/process-audit')
 @login_required
 def process_audit():
-    """Process Audit view - content will be added later."""
+    """Process Audit Dashboard - placeholder."""
     return render_template('process_audit.html', now=datetime.utcnow())
+
+
+@app.route('/process-audit-check-sheet')
+@login_required
+def process_audit_check_sheet():
+    """Process Audit Check Sheet - placeholder."""
+    return render_template('process_audit_check_sheet.html', now=datetime.utcnow())
 
 
 @app.route('/product-audit')
 @login_required
 def product_audit():
-    """Product Audit view - content will be added later."""
+    """Product Audit Dashboard - placeholder."""
     return render_template('product_audit.html', now=datetime.utcnow())
+
+
+@app.route('/product-audit-check-sheet')
+@login_required
+def product_audit_check_sheet():
+    """Product Audit Check Sheet - placeholder."""
+    return render_template('product_audit_check_sheet.html', now=datetime.utcnow())
 
 
 @app.route('/gemba')
 @login_required
 def gemba():
-    """Gemba view - content will be added later."""
+    """Gemba Dashboard - placeholder."""
     return render_template('gemba.html', now=datetime.utcnow())
+
+
+@app.route('/gemba-check-sheet')
+@login_required
+def gemba_check_sheet():
+    """Gemba Check Sheet - placeholder."""
+    return render_template('gemba_check_sheet.html', now=datetime.utcnow())
+
+
+@app.route('/ncr-dashboard')
+@login_required
+def ncr_dashboard():
+    """NCR Dashboard - placeholder."""
+    return render_template('ncr_dashboard.html', now=datetime.utcnow())
 
 
 @app.route('/ncr')

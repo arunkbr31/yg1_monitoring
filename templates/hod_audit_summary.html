@@ -53,7 +53,7 @@
                 </form>
             </div>
 
-            <div class="table-scroll" style="overflow-x:auto; overflow-y:auto; max-height: calc(100vh - 320px);">
+            <div class="table-scroll" style="overflow-x:auto; overflow-y:auto; max-height: calc(100vh - 340px);">
                 <table>
                     <thead>
                         <tr>
@@ -273,7 +273,8 @@ YG1.onReady(function() {
     flatpickr('.date-input', {
         dateFormat: 'd-m-Y',
         allowInput: true,
-        appendTo: document.body
+        appendTo: document.body,
+        position: 'auto right'
     });
 
     const zoneMap = {
