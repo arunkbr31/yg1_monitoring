@@ -916,6 +916,53 @@ def save_ncr():
         errors.append('Type of Defect is required.')
     if not defect_reason:
         errors.append('Defect Reason is required.')
+    if not wo_quantity:
+        errors.append('WO Quantity is required.')
+    if not problem_quantity:
+        errors.append('Problem Quantity is required.')
+    if not process_generated:
+        errors.append('Process Generated is required.')
+    if not operator:
+        errors.append('Operator is required.')
+    if not processing_result:
+        errors.append('Processing Result is required.')
+    if not final_result:
+        errors.append('Final Result is required.')
+    if status not in ['open', 'closed']:
+        errors.append('Invalid status.')
+
+    # Check for duplicate document number
+    if document_no:
+        existing_ncr = NCR.query.filter_by(document_no=document_no).first()
+        if existing_ncr and (not ncr or existing_ncr.id != ncr.id):
+            errors.append('Document No already exists.')
+
+    if errors:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'ok': False, 'message': errors[0], 'errors': errors}), 400
+        for e in errors:
+            flash(e, 'error')
+        return redirect(url_for('ncr'))
+    if not product:
+        errors.append('Product is required.')
+    if not tool_type:
+        errors.append('Tool Type is required.')
+    if not issued_by:
+        errors.append('Issued By is required.')
+    if not issued_dept:
+        errors.append('Issued Dept is required.')
+    if not wo_no:
+        errors.append('WO No is required.')
+    if not edp_no:
+        errors.append('EDP No is required.')
+    if not date_of_submission:
+        errors.append('Date of Submission is required.')
+    if not four_m:
+        errors.append('4M is required.')
+    if not type_of_defect:
+        errors.append('Type of Defect is required.')
+    if not defect_reason:
+        errors.append('Defect Reason is required.')
     if not operator:
         errors.append('Operator is required.')
     if not processing_result:
@@ -958,13 +1005,13 @@ def save_ncr():
             wo_no=wo_no,
             edp_no=edp_no,
             date_of_submission=date_of_submission,
-            as_on_date_days=as_on_days_val,
+            as_on_date_days=int(as_on_date_days) if as_on_date_days.isdigit() else as_on_date_days,
             four_m=four_m,
             type_of_defect=type_of_defect,
             defect_reason=defect_reason,
-            wo_quantity=wo_qty_val,
-            problem_quantity=prob_qty_val,
-            problem_rate=prob_rate_val,
+            wo_quantity=wo_quantity,
+            problem_quantity=problem_quantity,
+            problem_rate=problem_rate,
             process_generated=process_generated,
             operator=operator,
             processing_result=processing_result,
@@ -974,6 +1021,7 @@ def save_ncr():
             completed_date=completed_date,
         )
         db.session.add(ncr)
+        msg = 'NCR record created successfully.'
     else:
         ncr.document_no = document_no
         ncr.date_of_creation = date_of_creation
@@ -984,13 +1032,13 @@ def save_ncr():
         ncr.wo_no = wo_no
         ncr.edp_no = edp_no
         ncr.date_of_submission = date_of_submission
-        ncr.as_on_date_days = as_on_days_val
+        ncr.as_on_date_days = int(as_on_date_days) if as_on_date_days.isdigit() else as_on_date_days
         ncr.four_m = four_m
         ncr.type_of_defect = type_of_defect
         ncr.defect_reason = defect_reason
-        ncr.wo_quantity = wo_qty_val
-        ncr.problem_quantity = prob_qty_val
-        ncr.problem_rate = prob_rate_val
+        ncr.wo_quantity = wo_quantity
+        ncr.problem_quantity = problem_quantity
+        ncr.problem_rate = problem_rate
         ncr.process_generated = process_generated
         ncr.operator = operator
         ncr.processing_result = processing_result
@@ -999,9 +1047,20 @@ def save_ncr():
         ncr.reminder_1 = reminder_1
         ncr.completed_date = completed_date
         ncr.updated_at = datetime.utcnow()
+        msg = 'NCR record updated successfully.'
 
-    db.session.commit()
-    flash('NCR record saved successfully!', 'success')
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'ok': False, 'message': 'Document No already exists or duplicate entry.'}), 400
+        flash('Document No already exists or duplicate entry.', 'error')
+        return redirect(url_for('ncr'))
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'ok': True, 'message': msg})
+    flash(msg, 'success')
     return redirect(url_for('ncr'))
 
 

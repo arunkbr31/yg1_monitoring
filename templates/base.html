@@ -929,6 +929,7 @@
             margin-left: var(--sb-width);
             padding: 28px 36px;
             overflow-y: auto;
+            overflow-x: hidden;
             transition: margin-left .26s cubic-bezier(.4,0,.2,1);
         }
         /* Frosted strip: a solid background here would sit as an opaque bar across
@@ -1052,8 +1053,13 @@
         tbody tr:nth-child(even) { background: #fafbfc; }
 
         /* HOD Summary - let table scroll horizontally within itself, remove page-level vertical scroll */
-        .hod-summary-page .table-scroll { overflow-x: auto; }
-        .hod-summary-page .main { overflow-y: hidden; }
+        .flatpickr-calendar {
+            z-index: 10010 !important;
+        }
+        .hod-summary-page .main { overflow: hidden !important; }
+        .hod-summary-page .page-header { margin-bottom: 16px; }
+        .hod-summary-page .card { margin-bottom: 0; }
+        .hod-summary-page .table-scroll { overflow-x: auto; overflow-y: auto; }
 
         /* HOD Summary table enhancements */
         .table-scroll table { box-shadow: 0 1px 3px rgba(0,0,0,.04); }

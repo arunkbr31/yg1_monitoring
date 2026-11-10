@@ -2,7 +2,18 @@
 {% block title %}HOD Audit Summary | YG1 Monitoring{% endblock %}
 {% block body_class %}hod-audit-summary-page{% endblock %}
 {% block content %}
-<div class="layout">
+<style>
+        .cell-input.error {
+            border-color: #dc2626 !important;
+            box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1);
+        }
+        .cell-input.error:focus {
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+        }
+        .cell-input {
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+</style>
     {% include "_sidebar.html" %}
 
     <main class="main">
@@ -27,7 +38,7 @@
             {% endif %}
         {% endwith %}
 
-        <div class="card" style="display:flex; flex-direction:column; height:calc(100vh - 160px);">
+        <div class="card" style="display:flex; flex-direction:column; height:calc(100vh - 160px); overflow:hidden;">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; flex-shrink:0;">
                 <h3 style="margin:0;">HOD Audit Records</h3>
 
@@ -42,7 +53,7 @@
                 </form>
             </div>
 
-            <div class="table-scroll" style="flex:1; min-height:0;">
+            <div class="table-scroll" style="overflow-x:auto; overflow-y:auto; max-height: calc(100vh - 320px);">
                 <table>
                     <thead>
                         <tr>
@@ -163,31 +174,11 @@
                             </td>
 
                             <td data-label="Zone">
-                                <select form="audit-{{ a.id }}" name="zone" class="cell-input">
-                                    <option value="">-- Select --</option>
-
-                                    {% if a.zone and a.zone not in zones %}
-                                    <option value="{{ a.zone }}" selected>{{ a.zone }}</option>
-                                    {% endif %}
-
-                                    {% for z in zones %}
-                                    <option value="{{ z }}" {% if a.zone == z %}selected{% endif %}>{{ z }}</option>
-                                    {% endfor %}
-                                </select>
+                                <input type="text" form="audit-{{ a.id }}" name="zone" class="cell-input" value="{{ a.zone or '' }}" readonly>
                             </td>
 
                             <td data-label="Zonal Leader">
-                                <select form="audit-{{ a.id }}" name="zonal_leader" class="cell-input">
-                                    <option value="">-- Select --</option>
-
-                                    {% if a.zonal_leader and a.zonal_leader not in zonal_leaders %}
-                                    <option value="{{ a.zonal_leader }}" selected>{{ a.zonal_leader }}</option>
-                                    {% endif %}
-
-                                    {% for zl in zonal_leaders %}
-                                    <option value="{{ zl }}" {% if a.zonal_leader == zl %}selected{% endif %}>{{ zl }}</option>
-                                    {% endfor %}
-                                </select>
+                                <input type="text" form="audit-{{ a.id }}" name="zonal_leader" class="cell-input" value="{{ a.zonal_leader or '' }}" readonly>
                             </td>
 
                             <td data-label="NC Category">
@@ -203,11 +194,11 @@
                             </td>
 
                             <td data-label="Responsible HOD">
-                                <input type="text" form="audit-{{ a.id }}" name="responsible_hod" class="cell-input" value="{{ a.responsible_hod or '' }}">
+                                <input type="text" form="audit-{{ a.id }}" name="responsible_hod" class="cell-input" value="{{ a.responsible_hod or '' }}" readonly>
                             </td>
 
                             <td data-label="Responsible Email">
-                                <input type="email" form="audit-{{ a.id }}" name="responsible_email" class="cell-input" value="{{ a.responsible_email or '' }}">
+                                <input type="email" form="audit-{{ a.id }}" name="responsible_email" class="cell-input" value="{{ a.responsible_email or '' }}" readonly>
                             </td>
 
                             <td data-label="Target Date">
@@ -262,11 +253,11 @@
             </div>
 
             <!-- Form for creating a new audit -->
-            <form id="audit-new" method="POST" action="{{ url_for('save_audit') }}" enctype="multipart/form-data"></form>
+            <form id="audit-new" class="no-loading" method="POST" action="{{ url_for('save_audit') }}" enctype="multipart/form-data"></form>
 
             <!-- Forms for updating existing audits -->
             {% for a in audits %}
-            <form id="audit-{{ a.id }}" method="POST" action="{{ url_for('save_audit') }}" enctype="multipart/form-data">
+            <form id="audit-{{ a.id }}" class="no-loading" method="POST" action="{{ url_for('save_audit') }}" enctype="multipart/form-data">
                 <input type="hidden" name="audit_id" value="{{ a.id }}">
                 <input type="hidden" name="audit_type" value="HOD Audit">
             </form>
@@ -281,7 +272,8 @@
 YG1.onReady(function() {
     flatpickr('.date-input', {
         dateFormat: 'd-m-Y',
-        allowInput: true
+        allowInput: true,
+        appendTo: document.body
     });
 
     const zoneMap = {
@@ -421,6 +413,60 @@ function submitAuditForm(form) {
         return;
     }
 
+    // Clear previous errors
+    form.querySelectorAll('.cell-input').forEach(function(input) {
+        input.classList.remove('error');
+    });
+    form.querySelectorAll('.field-error-msg').forEach(function(msg) {
+        msg.remove();
+    });
+
+    // Client-side validation
+    var requiredFields = [];
+    if (form.id === 'audit-new') {
+        requiredFields = [
+            { name: 'audit_date', label: 'Audit Date' },
+            { name: 'plant', label: 'Plant' },
+            { name: 'zone', label: 'Zone' },
+            { name: 'nc_category', label: 'NC Category' },
+            { name: 'description', label: 'Description of NC' },
+            { name: 'action_taken_details', label: 'Action Taken' },
+            { name: 'target_date', label: 'Target Date' },
+            { name: 'status', label: 'Status' }
+        ];
+    } else {
+        requiredFields = [
+            { name: 'audit_date', label: 'Audit Date' },
+            { name: 'plant', label: 'Plant' },
+            { name: 'zone', label: 'Zone' },
+            { name: 'nc_category', label: 'NC Category' },
+            { name: 'description', label: 'Description of NC' },
+            { name: 'target_date', label: 'Target Date' },
+            { name: 'status', label: 'Status' }
+        ];
+    }
+
+    var hasError = false;
+    requiredFields.forEach(function(field) {
+        var input = form.querySelector('[name="' + field.name + '"]');
+        if (!input) {
+            // Also look for inputs with form attribute
+            input = document.querySelector('[form="' + form.id + '"][name="' + field.name + '"]');
+        }
+        if (input) {
+            var value = input.value.trim();
+            if (!value) {
+                hasError = true;
+                input.classList.add('error');
+            }
+        }
+    });
+
+    if (hasError) {
+        showFlash('Please fill in all required fields.', 'error');
+        return;
+    }
+
     var originalText = btn.textContent.trim();
 
     btn.textContent = form.id === 'audit-new' ? 'Saving...' : 'Updating...';
@@ -453,7 +499,7 @@ function submitAuditForm(form) {
                 throw new Error(
                     'The server returned an unexpected response (HTTP ' +
                     response.status +
-                    '). Check the Flask route and server logs.'
+                    ').'
                 );
             }
 
@@ -516,6 +562,23 @@ document.querySelectorAll('form[id^="audit-"]').forEach(function(form) {
         event.preventDefault();
         submitAuditForm(form);
     });
+});
+
+// Remove red border when user starts filling
+document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('cell-input')) {
+        if (e.target.value && e.target.value.trim() !== '') {
+            e.target.classList.remove('error');
+        }
+    }
+});
+
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('cell-input')) {
+        if (e.target.value && e.target.value.trim() !== '') {
+            e.target.classList.remove('error');
+        }
+    }
 });
 </script>
 {% endblock %}
