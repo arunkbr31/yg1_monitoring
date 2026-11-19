@@ -8,7 +8,10 @@
         <div class="page-header">
             <div>
                 <h1>Gemba Dashboard</h1>
-                <p>Gemba dashboard overview</p>
+                <p>Quality Scrap - Cause and Countermeasures (Gemba Meeting) saved records</p>
+            </div>
+            <div class="actions">
+                <a href="{{ url_for('gemba_check_sheet') }}" class="btn btn-primary">Open Check Sheet</a>
             </div>
         </div>
 
@@ -27,9 +30,65 @@
         {% endwith %}
 
         <div class="card">
-            <div class="empty-state">
-                <div class="icon">📋</div>
-                <p>Gemba dashboard data will be shown here.</p>
+            <h3 style="margin-bottom:16px;">Saved Records</h3>
+            <div class="table-scroll" style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>S.No.</th>
+                            <th>Organizer</th>
+                            <th>Agenda</th>
+                            <th>Date</th>
+                            <th>Type SC/Tap</th>
+                            <th>Items</th>
+                            <th>Work Order No</th>
+                            <th>EDP</th>
+                            <th>Tools Descriptions</th>
+                            <th>Scrap/Rework Qty.</th>
+                            <th>Scrap/Rework Reasons</th>
+                            <th>Machine No</th>
+                            <th>Operator Name</th>
+                            <th>Possible Causes</th>
+                            <th>Counter Measures</th>
+                            <th>Responsible</th>
+                            <th>Target Date</th>
+                            <th>Status</th>
+                            <th>Confirmed By</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if saved_records %}
+                            {% for rec in saved_records %}
+                            {% set row = rec.row %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ rec.organizer_name }}</td>
+                                <td>{{ rec.agenda }}</td>
+                                <td>{{ row.date or '' }}</td>
+                                <td>{{ row.type_sc_tap or '' }}</td>
+                                <td>{{ row['items'] or '' }}</td>
+                                <td>{{ row.work_order_no or '' }}</td>
+                                <td>{{ row.edp or '' }}</td>
+                                <td>{{ row.tools_descriptions or '' }}</td>
+                                <td>{{ row.scrap_rework_qty or '' }}</td>
+                                <td>{{ row.scrap_rework_reasons or '' }}</td>
+                                <td>{{ row.machine_no or '' }}</td>
+                                <td>{{ row.operator_name or '' }}</td>
+                                <td>{{ row.possible_causes or '' }}</td>
+                                <td>{{ row.counter_measures or '' }}</td>
+                                <td>{{ row.responsible or '' }}</td>
+                                <td>{{ row.target_date or '' }}</td>
+                                <td>{{ row.status or '' }}</td>
+                                <td>{{ row.confirmed_by or '' }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="19" style="text-align:center; color:var(--text-light); padding:20px;">No saved records yet.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </main>

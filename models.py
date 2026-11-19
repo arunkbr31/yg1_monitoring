@@ -2,6 +2,7 @@ from extensions import db
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import json
 
 
 class User(UserMixin, db.Model):
@@ -157,8 +158,26 @@ class FiveSAudit(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def get_responses(self):
-        import json
         return json.loads(self.responses or '{}')
 
     def __repr__(self):
         return f'<FiveSAudit {self.id} - {self.zone} - {self.audit_date}>'
+
+
+class GembaCheckSheet(db.Model):
+    __tablename__ = 'gemba_check_sheet'
+    id = db.Column(db.Integer, primary_key=True)
+    organizer_name = db.Column(db.String(120), nullable=False, default='')
+    agenda = db.Column(db.Text, nullable=False, default='')
+    rows_json = db.Column(db.Text, nullable=False, default='[]')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def get_rows(self):
+        try:
+            return json.loads(self.rows_json or '[]')
+        except Exception:
+            return []
+
+    def __repr__(self):
+        return f'<GembaCheckSheet {self.id} - {self.organizer_name}>'

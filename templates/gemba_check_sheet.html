@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Gemba Check Sheet | YG1 Monitoring{% endblock %}
+{% block body_class %}gemba-check-sheet-page{% endblock %}
 {% block content %}
 <div class="layout">
     {% include "_sidebar.html" %}
@@ -8,30 +9,246 @@
         <div class="page-header">
             <div>
                 <h1>Gemba Check Sheet</h1>
-                <p>Gemba check sheet overview</p>
+                <p>Quality Scrap - Cause and Countermeasures (Gemba Meeting)</p>
             </div>
         </div>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            <div class="flash-container">
-                {% for category, message in messages %}
-                <div class="flash flash-{{ category }}">
-                    <span class="flash-icon">{% if category == 'success' %}✓{% elif category == 'error' %}✕{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}</span>
-                    <span class="flash-text">{{ message }}</span>
-                    <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+        <div id="gemba-flash-container" class="flash-container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">
+                        <span class="flash-icon">{% if category == 'success' %}✓{% elif category == 'error' %}✕{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}</span>
+                        <span class="flash-text">{{ message }}</span>
+                        <button type="button" class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <form id="gemba-save-form" method="POST" action="{{ url_for('save_gemba_check_sheet') }}" class="no-loading">
+            <div class="card gemba-card">
+                <div class="gemba-title">Quality Scrap-Cause and Countermeasures (Gemba Meeting)</div>
+
+                <div class="gemba-meta">
+                    <div class="gemba-field">
+                        <label for="organizer_name">Organizer Name</label>
+                        <input type="text" id="organizer_name" name="organizer_name" class="meta-input" placeholder="Enter organizer name" autocomplete="off">
+                    </div>
+                    <div class="gemba-field">
+                        <label for="agenda">Agenda</label>
+                        <input type="text" id="agenda" name="agenda" class="meta-input" placeholder="Enter agenda" autocomplete="off">
+                    </div>
                 </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-        {% endwith %}
 
-        <div class="card">
-            <div class="empty-state">
-                <div class="icon">📋</div>
-                <p>Gemba Check Sheet data will be shown here.</p>
+                <div class="table-scroll gemba-table-wrap">
+                    <table class="gemba-table">
+                        <thead>
+                            <tr>
+                                <th>S.No.</th>
+                                <th>Date</th>
+                                <th>Type SC/Tap</th>
+                                <th>Items</th>
+                                <th>Work Order No</th>
+                                <th>EDP</th>
+                                <th>Tools Descriptions</th>
+                                <th>Scrap/Rework Qty.</th>
+                                <th>Scrap/Rework Reasons</th>
+                                <th>Machine No</th>
+                                <th>Operator Name</th>
+                                <th>Possible Causes</th>
+                                <th>Counter Measures</th>
+                                <th>Responsible</th>
+                                <th>Target Date</th>
+                                <th>Status</th>
+                                <th>Confirmed By</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gemba-entry-body">
+                            <tr>
+                                <td>1</td>
+                                <td><input type="text" name="date" class="cell-input date-input" placeholder="DD-MM-YYYY" autocomplete="off"></td>
+                                <td><input type="text" name="type_sc_tap" class="cell-input" placeholder="SC/Tap" autocomplete="off"></td>
+                                <td><input type="text" name="items" class="cell-input" placeholder="Items" autocomplete="off"></td>
+                                <td><input type="text" name="work_order_no" class="cell-input" placeholder="Work Order No" autocomplete="off"></td>
+                                <td><input type="text" name="edp" class="cell-input" placeholder="EDP" autocomplete="off"></td>
+                                <td><input type="text" name="tools_descriptions" class="cell-input" placeholder="Tools Descriptions" autocomplete="off"></td>
+                                <td><input type="text" name="scrap_rework_qty" class="cell-input" placeholder="Qty" autocomplete="off"></td>
+                                <td><input type="text" name="scrap_rework_reasons" class="cell-input" placeholder="Reasons" autocomplete="off"></td>
+                                <td><input type="text" name="machine_no" class="cell-input" placeholder="Machine No" autocomplete="off"></td>
+                                <td><input type="text" name="operator_name" class="cell-input" placeholder="Operator Name" autocomplete="off"></td>
+                                <td><input type="text" name="possible_causes" class="cell-input" placeholder="Possible causes" autocomplete="off"></td>
+                                <td><input type="text" name="counter_measures" class="cell-input" placeholder="Counter measures" autocomplete="off"></td>
+                                <td><input type="text" name="responsible" class="cell-input" placeholder="Responsible" autocomplete="off"></td>
+                                <td><input type="text" name="target_date" class="cell-input date-input" placeholder="DD-MM-YYYY" autocomplete="off"></td>
+                                <td>
+                                    <select name="status" class="cell-input" autocomplete="off">
+                                        <option value="">-- Select --</option>
+                                        <option value="Open">Open</option>
+                                        <option value="In Progress">In Progress</option>
+                                        <option value="Closed">Closed</option>
+                                    </select>
+                                </td>
+                                <td><input type="text" name="confirmed_by" class="cell-input" placeholder="Confirmed by" autocomplete="off"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="gemba-actions">
+                    <button type="submit" class="btn btn-primary" id="save-gemba-btn">Save</button>
+                </div>
             </div>
-        </div>
+        </form>
     </main>
 </div>
+
+<style>
+.gemba-card { display: flex; flex-direction: column; gap: 16px; }
+.gemba-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--dark);
+    text-align: center;
+    padding: 8px 0 4px;
+}
+.gemba-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: 16px;
+}
+.gemba-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-bottom: 6px;
+}
+.meta-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--gray-border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fff;
+}
+.meta-input:focus { outline: none; border-color: var(--primary); }
+.gemba-table-wrap { overflow-x: auto; overflow-y: hidden; }
+.gemba-table th, .gemba-table td { white-space: nowrap; vertical-align: middle; }
+.gemba-table .cell-input { min-width: 140px; }
+.gemba-table td input.date-input { cursor: pointer; }
+.gemba-actions { display: flex; justify-content: flex-end; margin-top: 4px; }
+.meta-input.error, .cell-input.error { border-color: #dc2626 !important; box-shadow: 0 0 0 2px rgba(220,38,38,.1); }
+@media (max-width: 768px) {
+    .gemba-meta { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+YG1.onReady(function() {
+    function initDatePickers(root) {
+        if (typeof flatpickr === 'undefined') return;
+        var scope = root || document;
+        var inputs = [];
+        if (scope.nodeType === 1 && scope.classList && scope.classList.contains('date-input')) {
+            inputs = [scope];
+        } else if (scope.querySelectorAll) {
+            inputs = scope.querySelectorAll('.date-input');
+        }
+        inputs.forEach(function(el) {
+            if (el._flatpickr) return;
+            flatpickr(el, {
+                dateFormat: 'd-m-Y',
+                allowInput: true,
+                clickOpens: true,
+                disableMobile: true,
+                appendTo: document.body
+            });
+        });
+    }
+
+    function showGembaFlash(message, category) {
+        var container = document.getElementById('gemba-flash-container');
+        if (!container) return;
+        var el = document.createElement('div');
+        el.className = 'flash flash-' + category;
+        el.innerHTML = '<span class="flash-icon">' + (category === 'success' ? '✓' : category === 'error' ? '✕' : category === 'warning' ? '⚠' : 'ℹ') + '</span>' +
+                       '<span class="flash-text"></span>' +
+                       '<button type="button" class="flash-close">&times;</button>';
+        el.querySelector('.flash-text').textContent = message;
+        el.querySelector('.flash-close').addEventListener('click', function() { el.remove(); });
+        container.appendChild(el);
+        setTimeout(function() { if (el.parentNode) el.remove(); }, category === 'success' ? 3500 : 6000);
+    }
+
+    initDatePickers(document);
+
+    var form = document.getElementById('gemba-save-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var btn = document.getElementById('save-gemba-btn');
+            var organizer = document.getElementById('organizer_name');
+            var agenda = document.getElementById('agenda');
+            [organizer, agenda].forEach(function(el){ if (el) el.classList.remove('error'); });
+
+            var hasRowData = false;
+            document.querySelectorAll('#gemba-entry-body input, #gemba-entry-body select, #gemba-entry-body textarea').forEach(function(el) {
+                if ((el.value || '').trim() !== '') hasRowData = true;
+            });
+
+            var errors = [];
+            if (!organizer || !organizer.value.trim()) {
+                errors.push('Organizer Name is required.');
+                if (organizer) organizer.classList.add('error');
+            }
+            if (!agenda || !agenda.value.trim()) {
+                errors.push('Agenda is required.');
+                if (agenda) agenda.classList.add('error');
+            }
+            if (!hasRowData) {
+                errors.push('Please fill in the entry fields before saving.');
+            }
+            if (errors.length) {
+                showGembaFlash(errors[0], 'error');
+                return;
+            }
+
+            var original = btn ? btn.textContent : 'Save';
+            if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            })
+            .then(function(res) {
+                return res.text().then(function(t) {
+                    var data;
+                    try { data = JSON.parse(t); } catch (e) { throw new Error('Unexpected server response.'); }
+                    if (!res.ok || data.ok !== true) {
+                        throw new Error((data && data.message) || 'Unable to save Gemba check sheet.');
+                    }
+                    return data;
+                });
+            })
+            .then(function(data) {
+                showGembaFlash(data.message || 'Gemba check sheet saved successfully.', 'success');
+                setTimeout(function() { window.location.reload(); }, 800);
+            })
+            .catch(function(err) {
+                showGembaFlash(err.message || 'Unable to save Gemba check sheet. Please try again.', 'error');
+            })
+            .finally(function() {
+                if (btn) { btn.disabled = false; btn.textContent = original; }
+            });
+        });
+    }
+});
+</script>
 {% endblock %}

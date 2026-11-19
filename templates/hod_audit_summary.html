@@ -463,8 +463,19 @@ function submitAuditForm(form) {
         }
     });
 
+    // Before image is mandatory for new records
+    if (form.id === 'audit-new') {
+        var beforeInput = document.querySelector('[form="audit-new"][name="before_image"]');
+        if (!beforeInput || !beforeInput.files || beforeInput.files.length === 0) {
+            hasError = true;
+            if (beforeInput) {
+                beforeInput.classList.add('error');
+            }
+        }
+    }
+
     if (hasError) {
-        showFlash('Please fill in all required fields.', 'error');
+        showFlash('Please fill in all required fields and select a Before image.', 'error');
         return;
     }
 

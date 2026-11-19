@@ -1355,6 +1355,23 @@
         .modal-actions .btn { min-width: 100px; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes scaleIn { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: scale(1); } }
+        body.gemba-check-sheet-page,
+        .gemba-check-sheet-page .layout {
+            height: 100vh;
+            overflow: hidden;
+        }
+        .gemba-check-sheet-page .main {
+            overflow: hidden !important;
+        }
+        .gemba-check-sheet-page .card {
+            margin-bottom: 0;
+        }
+        .gemba-check-sheet-page .table-scroll,
+        .gemba-check-sheet-page .gemba-table-wrap {
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+        }
+        .gemba-check-sheet-page .flatpickr-calendar { z-index: 10020 !important; }
     </style>
     <script>
         // Applied before the first paint so the sidebar never renders at the

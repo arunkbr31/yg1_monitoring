@@ -7,6 +7,7 @@ import json
 from datetime import datetime, date, timedelta
 from functools import wraps
 from io import BytesIO
+from extensions import db, migrate
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
@@ -19,7 +20,7 @@ from flask_login import (
 from dotenv import load_dotenv
 
 from extensions import db
-from models import User, Rule, Audit, Alert, MailLog, NCR, FiveSAudit
+from models import User, Rule, Audit, Alert, MailLog, NCR, FiveSAudit, GembaCheckSheet
 from sqlalchemy import case
 
 
@@ -35,7 +36,8 @@ os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
@@ -60,16 +62,16 @@ ZONES = [f'Zone {i}' for i in range(1, 21)]
 ZONAL_LEADERS = [
     'Mr. Jigar Paramar',
     'Mr. Srikanth S',
-    'mr vishwanth shetty',
-    'mr. jinesh R',
-    'Mr. vijay murthy',
-    'Mr. pavankumar',
-    'Mr.Avinash p',
-    'Mr.Ajay&Mr.Reguram',
-    'Mr. Vijay Moorthy',
-    'Mr.shethuraman',
-    'mr.surendra',
-    'Mr.Rajendra',
+    'Mr. Vishwanath shetty',
+    'Mr. Jinesh.R',
+    'Mr. Vijaymoorthy',
+    'Mr. Pavankumar',
+    'Mr. Avinash P',
+    'Mr. Ajay & Mr. Reguram',
+    'Mr. Ajay & Mr. Darmachari',
+    'Mr. Sethuraman',
+    'Mr. Surendra',
+    'Mr. Rajendra',
 ]
 
 STATUS_OPTIONS = ['open', 'closed']
@@ -202,6 +204,7 @@ def parse_date(value):
 
 
 db.init_app(app)
+migrate.init_app(app, db)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -851,15 +854,109 @@ def product_audit_check_sheet():
 @app.route('/gemba')
 @login_required
 def gemba():
-    """Gemba Dashboard - placeholder."""
-    return render_template('gemba.html', now=datetime.utcnow())
+    """Gemba Dashboard - shows saved Gemba check sheet records."""
+    sheets = GembaCheckSheet.query.order_by(GembaCheckSheet.id.desc()).all()
+    saved_records = []
+    idx = 1
+    for sheet in sheets:
+        for row in sheet.get_rows():
+            saved_records.append({
+                'id': idx,
+                'organizer_name': sheet.organizer_name,
+                'agenda': sheet.agenda,
+                'row': row
+            })
+            idx += 1
+    return render_template('gemba.html', now=datetime.utcnow(), saved_records=saved_records)
 
 
 @app.route('/gemba-check-sheet')
 @login_required
 def gemba_check_sheet():
-    """Gemba Check Sheet - placeholder."""
-    return render_template('gemba_check_sheet.html', now=datetime.utcnow())
+    """Gemba Check Sheet."""
+    sheets = GembaCheckSheet.query.order_by(GembaCheckSheet.id.desc()).all()
+    saved_records = []
+    idx = 1
+    for sheet in sheets:
+        for row in sheet.get_rows():
+            saved_records.append({
+                'id': idx,
+                'organizer_name': sheet.organizer_name,
+                'agenda': sheet.agenda,
+                'row': row
+            })
+            idx += 1
+    return render_template(
+        'gemba_check_sheet.html',
+        now=datetime.utcnow(),
+        saved_records=saved_records
+    )
+
+
+@app.route('/gemba-check-sheet/save', methods=['POST'])
+@login_required
+def save_gemba_check_sheet():
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    try:
+        organizer_name = (request.form.get('organizer_name') or '').strip()
+        agenda = (request.form.get('agenda') or '').strip()
+
+        row = {
+            'date': (request.form.get('date') or '').strip(),
+            'type_sc_tap': (request.form.get('type_sc_tap') or '').strip(),
+            'items': (request.form.get('items') or '').strip(),
+            'work_order_no': (request.form.get('work_order_no') or '').strip(),
+            'edp': (request.form.get('edp') or '').strip(),
+            'tools_descriptions': (request.form.get('tools_descriptions') or '').strip(),
+            'scrap_rework_qty': (request.form.get('scrap_rework_qty') or '').strip(),
+            'scrap_rework_reasons': (request.form.get('scrap_rework_reasons') or '').strip(),
+            'machine_no': (request.form.get('machine_no') or '').strip(),
+            'operator_name': (request.form.get('operator_name') or '').strip(),
+            'possible_causes': (request.form.get('possible_causes') or '').strip(),
+            'counter_measures': (request.form.get('counter_measures') or '').strip(),
+            'responsible': (request.form.get('responsible') or '').strip(),
+            'target_date': (request.form.get('target_date') or '').strip(),
+            'status': (request.form.get('status') or '').strip(),
+            'confirmed_by': (request.form.get('confirmed_by') or '').strip(),
+        }
+
+        errors = []
+        if not organizer_name:
+            errors.append('Organizer Name is required.')
+        if not agenda:
+            errors.append('Agenda is required.')
+        if not any(v for v in row.values()):
+            errors.append('Please fill in the entry fields before saving.')
+
+        if errors:
+            msg = ' '.join(errors)
+            if is_ajax:
+                return jsonify({'ok': False, 'message': msg, 'errors': errors}), 400
+            flash(msg, 'error')
+            return redirect(url_for('gemba_check_sheet'))
+
+        sheet = GembaCheckSheet(
+            organizer_name=organizer_name,
+            agenda=agenda,
+            rows_json=json.dumps([row], ensure_ascii=False),
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        db.session.add(sheet)
+        db.session.commit()
+
+        msg = 'Gemba check sheet saved successfully.'
+        if is_ajax:
+            return jsonify({'ok': True, 'message': msg, 'id': sheet.id})
+        flash(msg, 'success')
+        return redirect(url_for('gemba_check_sheet'))
+    except Exception:
+        db.session.rollback()
+        msg = 'Unable to save Gemba check sheet. Please try again.'
+        if is_ajax:
+            return jsonify({'ok': False, 'message': msg}), 500
+        flash(msg, 'error')
+        return redirect(url_for('gemba_check_sheet'))
 
 
 @app.route('/ncr-dashboard')
@@ -1232,7 +1329,7 @@ def charts_data():
     today = date.today()
     target_year = year if year else today.year
     monthly_results = db.session.query(
-        db.func.strftime('%Y-%m', Audit.audit_date).label('month'),
+        db.func.to_char(Audit.audit_date, 'YYYY-MM').label('month'),
         db.func.count(Audit.id).label('total'),
         db.func.sum(db.case((Audit.status == 'open', 1), else_=0)).label('open'),
         db.func.sum(db.case((Audit.status == 'closed', 1), else_=0)).label('closed')
@@ -1314,7 +1411,7 @@ def five_s_charts_data():
     # Month-wise totals for the current year
     today = date.today()
     month_query = db.session.query(
-        db.func.strftime('%Y-%m', FiveSAudit.audit_date).label('month'),
+        db.func.to_char(FiveSAudit.audit_date, 'YYYY-MM').label('month'),
         db.func.count(FiveSAudit.id).label('total'),
         db.func.sum(db.case((FiveSAudit.percentage >= 70, 1), else_=0)).label('good'),
         db.func.sum(db.case((FiveSAudit.percentage < 70, 1), else_=0)).label('poor'),
@@ -1960,6 +2057,11 @@ def save_audit():
     if status not in STATUS_OPTIONS:
         errors.append('Please select a valid Status.')
 
+    # Before image is mandatory for new records
+    before_file = request.files.get('before_image')
+    if not audit_id and (not before_file or not before_file.filename):
+        errors.append('Before image is required.')
+
     if errors:
         if is_ajax:
             return jsonify({'ok': False, 'errors': errors}), 400
@@ -1967,7 +2069,6 @@ def save_audit():
             flash(e, 'error')
         return redirect(url_for('audits'))
 
-    before_file = request.files.get('before_image')
     after_file = request.files.get('after_image')
 
     if not audit:
@@ -2244,6 +2345,7 @@ def _initialize_app():
     Runs on import so the DB is ready under gunicorn/WSGI too, not only
     when launched with `python app.py`."""
     with app.app_context():
+        # Ensure newly introduced tables exist without requiring manual migrations in dev.
         db.create_all()
         run_migrations()
 

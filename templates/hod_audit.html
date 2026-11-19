@@ -56,7 +56,9 @@
                         <select id="yearFilterPlant1" style="padding:4px 8px; border-radius:4px; border:1px solid #cbd5e1;"></select>
                     </div>
                 </div>
-                <canvas id="zoneChart"></canvas>
+                <div id="zoneChartContainer">
+                <canvas id="zoneChart" height="280"></canvas>
+                </div>
             </div>
             <div class="chart-box">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
@@ -66,7 +68,9 @@
                         <select id="yearFilterPlant2" style="padding:4px 8px; border-radius:4px; border:1px solid #cbd5e1;"></select>
                     </div>
                 </div>
-                <canvas id="zoneChart2"></canvas>
+                <div id="zoneChart2Container">
+                <canvas id="zoneChart2" height="280"></canvas>
+                </div>
             </div>
             <div class="chart-box">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
@@ -76,7 +80,9 @@
                         <select id="yearFilterPlant3" style="padding:4px 8px; border-radius:4px; border:1px solid #cbd5e1;"></select>
                     </div>
                 </div>
-                <canvas id="zoneChart3"></canvas>
+                <div id="zoneChart3Container">
+                <canvas id="zoneChart3" height="280"></canvas>
+                </div>
             </div>
         </div>
 
@@ -89,7 +95,9 @@
                 </div>
             </div>
             <div style="height:400px; position:relative;">
-                <canvas id="yearlyChart"></canvas>
+                <div id="yearlyChartContainer">
+                <canvas id="yearlyChart" height="400"></canvas>
+                </div>
             </div>
         </div>
 
@@ -146,6 +154,10 @@
 {% block scripts %}
 <script>
 YG1.onReady(function() {
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js failed to load. Charts will not be displayed.');
+        return;
+    }
     let chart1 = null, chart2 = null, chart3 = null, yearlyChart = null;
     const fetchAndRender = function(year) {
         let url = '{{ url_for("charts_data") }}?audit_type=HOD Audit';
@@ -172,9 +184,19 @@ YG1.onReady(function() {
                     };
                 });
 
-                const createPlantChart = function(canvasId, stats, existingChart) {
+                const createPlantChart = function(canvasId, stats, existingChart, containerId) {
                     if (existingChart) {
                         existingChart.destroy();
+                    }
+                    const container = document.getElementById(containerId);
+                    if (!stats || stats.length === 0) {
+                        if (container) {
+                            container.innerHTML = '<div style="display:flex; align-items:center; justify-content:center; height:200px; color:#64748b; font-size:14px;">No data available</div>';
+                        }
+                        return null;
+                    }
+                    if (container) {
+                        container.innerHTML = '<canvas id="' + canvasId + '" height="280"></canvas>';
                     }
                     const labels = stats.map(z => z.hod);
                     const chart = new Chart(document.getElementById(canvasId), {
@@ -257,9 +279,9 @@ YG1.onReady(function() {
                     return chart;
                 };
 
-                chart1 = createPlantChart('zoneChart', data.plant1_stats, chart1);
-                chart2 = createPlantChart('zoneChart2', data.plant2_stats, chart2);
-                chart3 = createPlantChart('zoneChart3', data.plant3_stats, chart3);
+                chart1 = createPlantChart('zoneChart', data.plant1_stats, chart1, 'zoneChartContainer');
+                chart2 = createPlantChart('zoneChart2', data.plant2_stats, chart2, 'zoneChart2Container');
+                chart3 = createPlantChart('zoneChart3', data.plant3_stats, chart3, 'zoneChart3Container');
 
                 const monthlyTrend = data.monthly_stats;
                 const monthLabels = monthlyTrend.map(m => m.month);
@@ -267,10 +289,19 @@ YG1.onReady(function() {
                 const monthOpen = monthlyTrend.map(m => m.open);
                 const monthClosed = monthlyTrend.map(m => m.closed);
 
+                const yearlyContainer = document.getElementById('yearlyChartContainer');
                 if (yearlyChart) {
                     yearlyChart.destroy();
                 }
-                yearlyChart = new Chart(document.getElementById('yearlyChart'), {
+                if (!monthlyTrend || monthlyTrend.every(m => m.total === 0)) {
+                    if (yearlyContainer) {
+                        yearlyContainer.innerHTML = '<div style="display:flex; align-items:center; justify-content:center; height:320px; color:#64748b; font-size:14px;">No data available</div>';
+                    }
+                } else {
+                    if (yearlyContainer) {
+                        yearlyContainer.innerHTML = '<canvas id="yearlyChart" height="400"></canvas>';
+                    }
+                    yearlyChart = new Chart(document.getElementById('yearlyChart'), {
                     type: 'bar',
                     plugins: [{
                         id: 'pctLabelsYear',
@@ -341,6 +372,7 @@ YG1.onReady(function() {
                         }
                     }
                 });
+                }
 
             })
             .catch(err => console.error('Chart data error:', err));
