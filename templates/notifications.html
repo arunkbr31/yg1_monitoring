@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Notifications | YG1 Monitoring{% endblock %}
+{% block body_class %}notifications-page{% endblock %}
+{% block content %}
+<div class="layout">
+    {% include "_sidebar.html" %}
+
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1>Notifications</h1>
+                <p>Audit notifications, target date alerts, and reminders</p>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">
+                    <span class="flash-icon">{% if category == 'success' %}✓{% elif category == 'error' %}✕{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}</span>
+                    <span class="flash-text">{{ message }}</span>
+                    <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        {% endwith %}
+
+        <div class="card">
+            {% if notifications %}
+            <p style="font-size:13px; color:var(--text-light); margin-bottom:12px;">{{ notifications|length }} notification{{ notifications|length != 1 and 's' or '' }} listed</p>
+            <div class="notifications-scroll">
+                <div class="notifications-list">
+                {% for notification in notifications %}
+                <div class="notification-item {% if notification.acknowledged %}resolved{% endif %}">
+                    <div class="notification-icon">{% if notification.acknowledged %}✅{% elif 'Overdue' in notification.subject %}🔴{% elif 'Due Soon' in notification.subject %}🟡{% else %}⚠️{% endif %}</div>
+                    <div class="notification-content">
+                        <strong>{{ notification.subject }}</strong>
+                        <span>{{ notification.message|truncate(200) }}</span>
+                        <span class="notification-meta">
+                            📧 {{ notification.responsible_email }} ·
+                            🕐 {{ notification.sent_at.strftime('%d %b %Y, %H:%M:%S') }} UTC ·
+                            Audit #{{ notification.audit_id }}
+                        </span>
+                    </div>
+                    <div class="notification-actions">
+                        <form method="POST" action="{{ url_for('resend_notification', notification_id=notification.id) }}">
+                            <button type="submit" class="btn btn-outline btn-sm">✉️ Send Mail</button>
+                        </form>
+                        {% if not notification.acknowledged %}
+                        <form method="POST" action="{{ url_for('acknowledge_notification', notification_id=notification.id) }}">
+                            <button type="submit" class="btn btn-success btn-sm">Acknowledge</button>
+                        </form>
+                        {% else %}
+                        <span class="badge badge-compliant">Acknowledged</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="icon">🔕</div>
+                <p>No notifications yet. Notifications are created when a new audit is saved or a target date is overdue / due soon.</p>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+</div>
+{% endblock %}

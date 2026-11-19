@@ -46,7 +46,7 @@
                 <div class="form-group">
                     <label for="current_location">Current Location of Item *</label>
                     <input type="text" id="current_location" name="current_location" placeholder="Where is the item actually located?" required value="{{ form.current_location if form else '' }}">
-                    <small style="color:var(--text-light); display:block; margin-top:4px;">If this does not match the rule's required location, a violation alert will be sent.</small>
+                    <small style="color:var(--text-light); display:block; margin-top:4px;">If this does not match the rule's required location, a violation notification will be sent.</small>
                 </div>
                 <div class="form-group">
                     <label for="responsible_person">Responsible Person *</label>
@@ -55,7 +55,7 @@
                 <div class="form-group">
                     <label for="coordinator_email">Coordinator Email *</label>
                     <input type="email" id="coordinator_email" name="coordinator_email" placeholder="coordinator@company.com" required value="{{ form.coordinator_email if form else '' }}">
-                    <small style="color:var(--text-light); display:block; margin-top:4px;">Violation alerts will be sent to this email immediately.</small>
+                    <small style="color:var(--text-light); display:block; margin-top:4px;">Violation notifications will be sent to this email immediately.</small>
                 </div>
                 <div class="form-group">
                     <label for="violation_reason">Violation Reason (optional)</label>

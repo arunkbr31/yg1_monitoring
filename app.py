@@ -20,7 +20,7 @@ from flask_login import (
 from dotenv import load_dotenv
 
 from extensions import db
-from models import User, Rule, Audit, Alert, MailLog, NCR, FiveSAudit, GembaCheckSheet
+from models import User, Rule, Audit, Notification, MailLog, NCR, FiveSAudit, GembaCheckSheet
 from sqlalchemy import case
 
 
@@ -274,76 +274,76 @@ def send_email(to_email, subject, body_text, body_html=None):
         return False, error_msg
 
 
-REMINDER_DAYS = int(os.getenv('ALERT_REMINDER_DAYS', '6'))
-REMINDER_CHECK_INTERVAL = int(os.getenv('ALERT_REMINDER_INTERVAL_SECONDS', '300'))
+NOTIFICATION_REMINDER_DAYS = int(os.getenv('NOTIFICATION_REMINDER_DAYS', '6'))
+REMINDER_CHECK_INTERVAL = int(os.getenv('NOTIFICATION_REMINDER_INTERVAL_SECONDS', '300'))
 _scheduler_started = False
 
 
-def send_due_alert_reminders():
-    """Send one reminder email for each alert that is still open (not
-    acknowledged) and was created at least ALERT_REMINDER_DAYS ago.
-    Each alert is reminded only once, stamped via reminder_sent_at, and
+def send_due_notification_reminders():
+    """Send one reminder email for each notification that is still open (not
+    acknowledged) and was created at least NOTIFICATION_REMINDER_DAYS ago.
+    Each notification is reminded only once, stamped via reminder_sent_at, and
     only the responsible_email on record receives it."""
     with app.app_context():
-        cutoff = datetime.utcnow() - timedelta(days=REMINDER_DAYS)
-        due = (Alert.query
-               .filter(Alert.acknowledged.is_(False),
-                       Alert.reminder_sent_at.is_(None),
-                       Alert.created_at <= cutoff)
+        cutoff = datetime.utcnow() - timedelta(days=NOTIFICATION_REMINDER_DAYS)
+        due = (Notification.query
+               .filter(Notification.acknowledged.is_(False),
+                       Notification.reminder_sent_at.is_(None),
+                       Notification.created_at <= cutoff)
                .all())
-        for alert in due:
-            audit = db.session.get(Audit, alert.audit_id)
+        for notification in due:
+            audit = db.session.get(Audit, notification.audit_id)
             if not audit:
-                alert.reminder_sent_at = datetime.utcnow()
+                notification.reminder_sent_at = datetime.utcnow()
                 db.session.commit()
                 continue
-            subject = f"[Reminder] Overdue: {alert.subject}"
-            created_str = alert.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            subject = f"[Reminder] Overdue: {notification.subject}"
+            created_str = notification.created_at.strftime('%Y-%m-%d %H:%M:%S')
             body_text = (
-                f"REMINDER: This alert is still OPEN and overdue "
-                f"(opened {REMINDER_DAYS} day(s) ago).\n\n"
-                f"Subject: {alert.subject}\n"
+                f"REMINDER: This notification is still OPEN and overdue "
+                f"(opened {NOTIFICATION_REMINDER_DAYS} day(s) ago).\n\n"
+                f"Subject: {notification.subject}\n"
                 f"Responsible HOD: {audit.responsible_hod}\n"
-                f"Responsible Email: {alert.responsible_email}\n"
+                f"Responsible Email: {notification.responsible_email}\n"
                 f"Created: {created_str}\n"
                 f"Audit Status: {audit.status}\n\n"
-                f"Details:\n{alert.message}\n\n"
-                "Please take immediate action and acknowledge this alert once resolved."
+                f"Details:\n{notification.message}\n\n"
+                "Please take immediate action and acknowledge this notification once resolved."
             )
             body_html = (
-                f"<h3>REMINDER: {alert.subject}</h3>"
-                f"<p>This alert is still <strong>OPEN</strong> and overdue "
-                f"(opened {REMINDER_DAYS} day(s) ago).</p>"
+                f"<h3>REMINDER: {notification.subject}</h3>"
+                f"<p>This notification is still <strong>OPEN</strong> and overdue "
+                f"(opened {NOTIFICATION_REMINDER_DAYS} day(s) ago).</p>"
                 f"<p><strong>Responsible HOD:</strong> {audit.responsible_hod}<br>"
-                f"<strong>Email:</strong> {alert.responsible_email}<br>"
+                f"<strong>Email:</strong> {notification.responsible_email}<br>"
                 f"<strong>Created:</strong> {created_str}<br>"
                 f"<strong>Audit Status:</strong> {audit.status}</p>"
-                f"<p>{alert.message.replace(chr(10), '<br>')}</p>"
-                f"<p>Please take immediate action and acknowledge this alert once resolved.</p>"
+                f"<p>{notification.message.replace(chr(10), '<br>')}</p>"
+                f"<p>Please take immediate action and acknowledge this notification once resolved.</p>"
             )
-            sent, error_msg = send_email(alert.responsible_email, subject, body_text, body_html)
+            sent, error_msg = send_email(notification.responsible_email, subject, body_text, body_html)
             if sent:
-                alert.reminder_sent_at = datetime.utcnow()
+                notification.reminder_sent_at = datetime.utcnow()
                 db.session.commit()
             status = 'sent' if sent else f'failed: {error_msg}'
-            print(f"[REMINDER] alert#{alert.id} -> {alert.responsible_email} ({status})")
+            print(f"[REMINDER] notification#{notification.id} -> {notification.responsible_email} ({status})")
 
 
-def _reminder_loop():
+def _notification_loop():
     while True:
         try:
-            send_due_alert_reminders()
+            send_due_notification_reminders()
         except Exception as e:
             print(f"[REMINDER] check failed: {e}")
         time.sleep(REMINDER_CHECK_INTERVAL)
 
 
-def _start_alert_reminder_scheduler():
+def _start_notification_reminder_scheduler():
     global _scheduler_started
     if _scheduler_started:
         return
     _scheduler_started = True
-    threading.Thread(target=_reminder_loop, daemon=True).start()
+    threading.Thread(target=_notification_loop, daemon=True).start()
 
 
 def normalize_choice(value, options):
@@ -395,12 +395,12 @@ def run_migrations():
             if leader != audit.zonal_leader and leader in ZONAL_LEADERS:
                 audit.zonal_leader = leader
 
-    if 'alert' in inspector.get_table_names():
-        alert_cols = {c['name'] for c in inspector.get_columns('alert')}
-        if 'reminder_sent_at' not in alert_cols:
+    if 'notification' in inspector.get_table_names():
+        notif_cols = {c['name'] for c in inspector.get_columns('notification')}
+        if 'reminder_sent_at' not in notif_cols:
             with db.engine.begin() as conn:
-                conn.execute(text("ALTER TABLE alert ADD COLUMN reminder_sent_at DATETIME"))
-            print('[OK] Migration: added alert.reminder_sent_at column')
+                conn.execute(text("ALTER TABLE notification ADD COLUMN reminder_sent_at DATETIME"))
+            print('[OK] Migration: added notification.reminder_sent_at column')
 
     if 'rule' in inspector.get_table_names():
         rule_cols = {c['name'] for c in inspector.get_columns('rule')}
@@ -454,25 +454,25 @@ def get_status_counts(audit_type=None):
     }
 
 
-def get_alert_counts(audit_type=None):
-    """Pending alert counts for the dashboard.
+def get_notification_counts(audit_type=None):
+    """Pending notification counts for the dashboard.
 
-    `open`     -> alerts still pending (not acknowledged)
-    `overdue`  -> pending alerts older than ALERT_REMINDER_DAYS (i.e. due a reminder)
-    `acknowledged` -> resolved alerts
+    `open`     -> notifications still pending (not acknowledged)
+    `overdue`  -> pending notifications older than NOTIFICATION_REMINDER_DAYS (i.e. due a reminder)
+    `acknowledged` -> resolved notifications
     """
-    cutoff = datetime.utcnow() - timedelta(days=REMINDER_DAYS)
-    base = Alert.query
+    cutoff = datetime.utcnow() - timedelta(days=NOTIFICATION_REMINDER_DAYS)
+    base = Notification.query
     if audit_type:
-        base = base.join(Audit, Alert.audit_id == Audit.id).filter(
+        base = base.join(Audit, Notification.audit_id == Audit.id).filter(
             Audit.audit_type == audit_type
         )
-    open_count = base.filter(Alert.acknowledged.is_(False)).count()
+    open_count = base.filter(Notification.acknowledged.is_(False)).count()
     overdue_count = base.filter(
-        Alert.acknowledged.is_(False),
-        Alert.created_at <= cutoff,
+        Notification.acknowledged.is_(False),
+        Notification.created_at <= cutoff,
     ).count()
-    acknowledged_count = base.filter(Alert.acknowledged.is_(True)).count()
+    acknowledged_count = base.filter(Notification.acknowledged.is_(True)).count()
     return {
         'open': open_count,
         'overdue': overdue_count,
@@ -567,15 +567,15 @@ def dashboard():
 def hod_audit():
     """HOD Audit view - shows the same overview the dashboard shows."""
     audits = Audit.query.order_by(Audit.created_at.desc()).limit(10).all()
-    alerts = Alert.query.order_by(Alert.sent_at.desc()).limit(10).all()
+    notifications = Notification.query.order_by(Notification.sent_at.desc()).limit(10).all()
     counts = get_status_counts(audit_type='HOD Audit')
 
     return render_template(
         'hod_audit.html',
         audits=audits,
-        alerts=alerts,
+        notifications=notifications,
         counts=counts,
-        alert_counts=get_alert_counts(audit_type='HOD Audit'),
+        notification_counts=get_notification_counts(audit_type='HOD Audit'),
         audit_types=AUDIT_TYPES,
         current_audit_type='HOD Audit',
         now=datetime.utcnow()
@@ -608,16 +608,16 @@ def hod_audit_summary():
 @login_required
 def five_s_audit():
     audits = []
-    alerts = Alert.query.order_by(Alert.sent_at.desc()).limit(10).all()
+    notifications = Notification.query.order_by(Notification.sent_at.desc()).limit(10).all()
     counts = get_status_counts(audit_type='5S Audit')
     zone_query = request.args.get('zone', '').strip()
 
     return render_template(
         'five_s_audit.html',
         audits=audits,
-        alerts=alerts,
+        notifications=notifications,
         counts=counts,
-        alert_counts=get_alert_counts(audit_type='5S Audit'),
+        notification_counts=get_notification_counts(audit_type='5S Audit'),
         audit_types=AUDIT_TYPES,
         current_audit_type='5S Audit',
         zones=ZONES,
@@ -1921,11 +1921,14 @@ def export_audits_pdf():
         table_data.append([Paragraph(str(c), cell_style) for c in cols])
 
     col_widths = [
-        12 * mm, 20 * mm, 18 * mm, 18 * mm, 22 * mm, 19 * mm,
-        34 * mm, 34 * mm, 25 * mm, 33 * mm, 20 * mm, 16 * mm,
+        10 * mm, 16 * mm, 16 * mm, 16 * mm, 20 * mm, 17 * mm,
+        28 * mm, 28 * mm, 22 * mm, 28 * mm, 28 * mm, 18 * mm, 16 * mm,
     ]
     table = Table(table_data, colWidths=col_widths, repeatRows=1, hAlign='LEFT')
-    table.setStyle(TableStyle([
+
+    # Color-code the Status column: green for Closed, red for Open
+    status_col_index = len(pdf_headers) - 1  # last column
+    table_style_commands = [
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2563eb')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
@@ -1938,7 +1941,17 @@ def export_audits_pdf():
         ('RIGHTPADDING', (0, 0), (-1, -1), 5),
         ('TOPPADDING', (0, 0), (-1, -1), 4),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-    ]))
+    ]
+    for row_idx in range(1, len(table_data)):
+        status_value = str(table_data[row_idx][status_col_index])
+        if status_value.lower() == 'closed':
+            table_style_commands.append(('TEXTCOLOR', (status_col_index, row_idx), (status_col_index, row_idx), colors.HexColor('#16a34a')))
+            table_style_commands.append(('FONTNAME', (status_col_index, row_idx), (status_col_index, row_idx), 'Helvetica-Bold'))
+        elif status_value.lower() == 'open':
+            table_style_commands.append(('TEXTCOLOR', (status_col_index, row_idx), (status_col_index, row_idx), colors.HexColor('#dc2626')))
+            table_style_commands.append(('FONTNAME', (status_col_index, row_idx), (status_col_index, row_idx), 'Helvetica-Bold'))
+
+    table.setStyle(TableStyle(table_style_commands))
     elements.append(table)
 
     doc.build(elements, onFirstPage=add_header_footer, onLaterPages=add_header_footer)
@@ -2100,7 +2113,17 @@ def save_audit():
     db.session.commit()
 
     if not audit_id:
-        create_audit_alert(audit)
+        create_audit_notification(audit)
+
+        # Target date notifications: overdue or 6 days before
+        if audit.target_date:
+            today = date.today()
+            days_diff = (audit.target_date - today).days
+            if days_diff < 0:
+                create_target_date_notification(audit, 'overdue')
+            elif days_diff <= NOTIFICATION_REMINDER_DAYS:
+                create_target_date_notification(audit, 'due_soon')
+
         msg = 'Audit record saved successfully!'
     else:
         msg = 'Audit record updated successfully!'
@@ -2206,8 +2229,8 @@ def hod_detail(hod):
     )
 
 
-def create_audit_alert(audit):
-    subject = f"New Audit Alert: {audit.nc_category} - {audit.plant}"
+def create_audit_notification(audit):
+    subject = f"New Audit Notification: {audit.nc_category} - {audit.plant}"
     plant_info = f"Plant: {audit.plant}\nZone: {audit.zone}"
     body_text = (
         f"A new audit record has been created.\n\n"
@@ -2222,7 +2245,7 @@ def create_audit_alert(audit):
         f"Please take necessary action."
     )
     body_html = (
-        f"<h3>New Audit Alert: {audit.nc_category}</h3>"
+        f"<h3>New Audit Notification: {audit.nc_category}</h3>"
         f"<p><strong>Plant:</strong> {audit.plant}</p>"
         f"<p><strong>Zone:</strong> {audit.zone}</p>"
         f"<p><strong>Audit Date:</strong> {audit.audit_date}</p>"
@@ -2235,23 +2258,101 @@ def create_audit_alert(audit):
         f"<p>Please take necessary action.</p>"
     )
 
-    alert = Alert(
+    notification = Notification(
         audit_id=audit.id,
         subject=subject,
         message=body_text,
         responsible_email=audit.responsible_email,
         sent_at=datetime.utcnow(),
     )
-    db.session.add(alert)
+    db.session.add(notification)
     db.session.commit()
 
     sent, error_msg = send_email(audit.responsible_email, subject, body_text, body_html)
     if sent:
-        flash(f"Alert email sent to {audit.responsible_email}.", 'success')
+        flash(f"Notification email sent to {audit.responsible_email}.", 'success')
     else:
         flash(f"Email failed: {error_msg}", 'error')
 
-    return alert
+    return notification
+
+
+def create_target_date_notification(audit, kind):
+    """Create a notification when a HOD audit target date is overdue or due soon."""
+    today = date.today()
+    days_diff = (audit.target_date - today).days
+    if kind == 'overdue':
+        subject = f"Target Date Overdue: {audit.nc_category} - {audit.plant}"
+        body_text = (
+            f"The target date for this audit has passed.\n\n"
+            f"Audit Date: {audit.audit_date}\n"
+            f"Plant: {audit.plant}\nZone: {audit.zone}\n"
+            f"Zonal Leader: {audit.zonal_leader}\n"
+            f"NC Category: {audit.nc_category}\n"
+            f"Description: {audit.description}\n"
+            f"Responsible HOD: {audit.responsible_hod}\n"
+            f"Target Date: {audit.target_date} (overdue by {abs(days_diff)} day(s))\n"
+            f"Status: {audit.status}\n\n"
+            f"Please take immediate action."
+        )
+        body_html = (
+            f"<h3>Target Date Overdue: {audit.nc_category}</h3>"
+            f"<p><strong>Plant:</strong> {audit.plant}</p>"
+            f"<p><strong>Zone:</strong> {audit.zone}</p>"
+            f"<p><strong>Audit Date:</strong> {audit.audit_date}</p>"
+            f"<p><strong>Zonal Leader:</strong> {audit.zonal_leader}</p>"
+            f"<p><strong>NC Category:</strong> {audit.nc_category}</p>"
+            f"<p><strong>Description:</strong> {audit.description}</p>"
+            f"<p><strong>Responsible HOD:</strong> {audit.responsible_hod}</p>"
+            f"<p><strong>Target Date:</strong> {audit.target_date} (overdue by {abs(days_diff)} day(s))</p>"
+            f"<p><strong>Status:</strong> {audit.status}</p>"
+            f"<p>Please take immediate action.</p>"
+        )
+    else:
+        subject = f"Target Date Due Soon: {audit.nc_category} - {audit.plant}"
+        body_text = (
+            f"The target date for this audit is approaching.\n\n"
+            f"Audit Date: {audit.audit_date}\n"
+            f"Plant: {audit.plant}\nZone: {audit.zone}\n"
+            f"Zonal Leader: {audit.zonal_leader}\n"
+            f"NC Category: {audit.nc_category}\n"
+            f"Description: {audit.description}\n"
+            f"Responsible HOD: {audit.responsible_hod}\n"
+            f"Target Date: {audit.target_date} (in {days_diff} day(s))\n"
+            f"Status: {audit.status}\n\n"
+            f"Please take necessary action before the target date."
+        )
+        body_html = (
+            f"<h3>Target Date Due Soon: {audit.nc_category}</h3>"
+            f"<p><strong>Plant:</strong> {audit.plant}</p>"
+            f"<p><strong>Zone:</strong> {audit.zone}</p>"
+            f"<p><strong>Audit Date:</strong> {audit.audit_date}</p>"
+            f"<p><strong>Zonal Leader:</strong> {audit.zonal_leader}</p>"
+            f"<p><strong>NC Category:</strong> {audit.nc_category}</p>"
+            f"<p><strong>Description:</strong> {audit.description}</p>"
+            f"<p><strong>Responsible HOD:</strong> {audit.responsible_hod}</p>"
+            f"<p><strong>Target Date:</strong> {audit.target_date} (in {days_diff} day(s))</p>"
+            f"<p><strong>Status:</strong> {audit.status}</p>"
+            f"<p>Please take necessary action before the target date.</p>"
+        )
+
+    notification = Notification(
+        audit_id=audit.id,
+        subject=subject,
+        message=body_text,
+        responsible_email=audit.responsible_email,
+        sent_at=datetime.utcnow(),
+    )
+    db.session.add(notification)
+    db.session.commit()
+
+    sent, error_msg = send_email(audit.responsible_email, subject, body_text, body_html)
+    if sent:
+        flash(f"Target date notification email sent to {audit.responsible_email}.", 'success')
+    else:
+        flash(f"Email failed: {error_msg}", 'error')
+
+    return notification
 
 
 @app.route('/mail-logs')
@@ -2261,48 +2362,48 @@ def mail_logs():
     return render_template('mail_logs.html', logs=logs)
 
 
-@app.route('/alerts')
+@app.route('/notifications')
 @login_required
-def alerts():
-    all_alerts = Alert.query.order_by(Alert.sent_at.desc()).all()
-    return render_template('alerts.html', alerts=all_alerts)
+def notifications():
+    all_notifications = Notification.query.order_by(Notification.sent_at.desc()).all()
+    return render_template('notifications.html', notifications=all_notifications)
 
 
-@app.route('/alerts/acknowledge/<int:alert_id>', methods=['POST'])
+@app.route('/notifications/acknowledge/<int:notification_id>', methods=['POST'])
 @login_required
-def acknowledge_alert(alert_id):
-    alert = db.session.get(Alert, alert_id)
-    if alert:
-        alert.acknowledged = True
+def acknowledge_notification(notification_id):
+    notification = db.session.get(Notification, notification_id)
+    if notification:
+        notification.acknowledged = True
         db.session.commit()
-        flash('Alert acknowledged.', 'success')
+        flash('Notification acknowledged.', 'success')
     else:
-        flash('Alert not found.', 'error')
-    return redirect(url_for('hod_audit'))
+        flash('Notification not found.', 'error')
+    return redirect(url_for('notifications'))
 
 
-@app.route('/alerts/resend/<int:alert_id>', methods=['POST'])
+@app.route('/notifications/resend/<int:notification_id>', methods=['POST'])
 @login_required
-def resend_alert(alert_id):
-    alert = db.session.get(Alert, alert_id)
-    if alert:
-        audit = db.session.get(Audit, alert.audit_id)
+def resend_notification(notification_id):
+    notification = db.session.get(Notification, notification_id)
+    if notification:
+        audit = db.session.get(Audit, notification.audit_id)
         if audit:
             sent, error_msg = send_email(
-                alert.responsible_email,
-                alert.subject,
-                alert.message,
-                f"<h3>{alert.subject}</h3><p>{alert.message.replace(chr(10), '<br>')}</p>"
+                notification.responsible_email,
+                notification.subject,
+                notification.message,
+                f"<h3>{notification.subject}</h3><p>{notification.message.replace(chr(10), '<br>')}</p>"
             )
             if sent:
-                flash(f"Alert resent to {alert.responsible_email}.", 'success')
+                flash(f"Notification resent to {notification.responsible_email}.", 'success')
             else:
                 flash(f"Email failed: {error_msg}", 'error')
         else:
             flash('Associated audit not found.', 'error')
     else:
-        flash('Alert not found.', 'error')
-    return redirect(url_for('alerts'))
+        flash('Notification not found.', 'error')
+    return redirect(url_for('notifications'))
 
 
 @app.route('/test-email')
@@ -2360,10 +2461,20 @@ def _initialize_app():
 _initialize_app()
 
 
+@app.context_processor
+def inject_notification_count():
+    """Make unacknowledged notification count available to all templates."""
+    try:
+        count = Notification.query.filter_by(acknowledged=False).count()
+    except Exception:
+        count = 0
+    return dict(notification_count=count)
+
+
 if __name__ == '__main__':
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        _start_alert_reminder_scheduler()
-        print('[OK] Alert reminder scheduler started (checks every %ds)' % REMINDER_CHECK_INTERVAL)
+        _start_notification_reminder_scheduler()
+        print('[OK] Notification reminder scheduler started (checks every %ds)' % REMINDER_CHECK_INTERVAL)
 
     app.run(debug=True)
     
