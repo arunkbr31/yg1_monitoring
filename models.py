@@ -60,7 +60,7 @@ class Audit(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    alerts = db.relationship('Alert', backref='audit', lazy=True, cascade='all, delete-orphan')
+    notifications = db.relationship('Notification', backref='audit', lazy=True, cascade='all, delete-orphan')
 
     @property
     def plant(self):
@@ -77,6 +77,22 @@ class Audit(db.Model):
 
     def __repr__(self):
         return f'<Audit {self.id} - {self.nc_category}>'
+
+
+class Notification(db.Model):
+    __tablename__ = 'notification'
+    id = db.Column(db.Integer, primary_key=True)
+    audit_id = db.Column(db.Integer, db.ForeignKey('audit.id'), nullable=False)
+    subject = db.Column(db.String(200), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    responsible_email = db.Column(db.String(120), nullable=False)
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow)
+    acknowledged = db.Column(db.Boolean, default=False)
+    reminder_sent_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Notification {self.id} - {self.subject}>'
 
 
 class Alert(db.Model):
