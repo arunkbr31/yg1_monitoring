@@ -24,7 +24,8 @@ from models import User, Rule, Audit, Notification, MailLog, NCR, FiveSAudit, Ge
 from sqlalchemy import case
 
 
-load_dotenv()
+
+
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -34,12 +35,35 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 db_path = os.path.join(basedir, 'instance', 'database.db')
 os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
+
+load_dotenv()
+
 app = Flask(__name__)
+
+database_url = os.getenv("DATABASE_URL")
+
+if not database_url:
+    raise RuntimeError("DATABASE_URL is not configured")
+
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace(
+        "postgres://",
+        "postgresql://",
+        1
+    )
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    "pool_pre_ping": True,
+    "pool_recycle": 300,
+    "pool_size": 5,
+    "max_overflow": 2
+}
+
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
-# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + db_path
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
 app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
@@ -2446,16 +2470,25 @@ def _initialize_app():
     Runs on import so the DB is ready under gunicorn/WSGI too, not only
     when launched with `python app.py`."""
     with app.app_context():
-        # Ensure newly introduced tables exist without requiring manual migrations in dev.
-        db.create_all()
+        # Skip create_all in flask CLI mode (flask db commands handle schema)
+        import sys
+        if 'flask' not in sys.argv[0].lower() and 'migrate' not in ' '.join(sys.argv):
+            try:
+                db.create_all()
+            except Exception as e:
+                print(f'[WARN] create_all skipped: {e}')
         run_migrations()
 
-        if not User.query.filter_by(username='admin').first():
-            admin = User(username='admin', email='admin@company.com', role='admin')
-            admin.set_password('Admin@123')
-            db.session.add(admin)
-            db.session.commit()
-            print('[OK] Default admin created: username="admin" password="Admin@123"')
+        try:
+            if not User.query.filter_by(username='admin').first():
+                admin = User(username='admin', email='admin@company.com', role='admin')
+                admin.set_password('Admin@123')
+                db.session.add(admin)
+                db.session.commit()
+                print('[OK] Default admin created: username="admin" password="Admin@123"')
+        except Exception as e:
+            print(f'[WARN] Admin seed skipped: {e}')
+            db.session.rollback()
 
 
 _initialize_app()
