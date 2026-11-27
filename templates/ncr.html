@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}NCR | YG1 Monitoring{% endblock %}
+{% block title %}NCR Track Sheet | YG1 Monitoring{% endblock %}
 {% block body_class %}ncr-page{% endblock %}
 {% block content %}
 <div class="layout">
@@ -8,7 +8,7 @@
     <main class="main">
         <div class="page-header">
             <div>
-                <h1>NCR</h1>
+                <h1>NCR Track Sheet</h1>
                 <p>Non-Conformance Report monitoring overview</p>
             </div>
         </div>
@@ -26,6 +26,19 @@
             </div>
             {% endif %}
         {% endwith %}
+
+        {% if due_reminders %}
+        <div id="ncr-reminder-banner" class="reminder-banner">
+            <div class="reminder-banner-content">
+                <span class="reminder-icon">⚠</span>
+                <div>
+                    <div class="reminder-banner-title">NCR Reminder(s) Due</div>
+                    <div class="reminder-banner-list" id="reminder-banner-list"></div>
+                </div>
+                <button class="reminder-banner-close" onclick="closeReminderBanner()">&times;</button>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="card" style="display:flex; flex-direction:column; height:calc(100vh - 160px);">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; flex-shrink:0;">
@@ -84,9 +97,9 @@
                             <td><input type="text" form="ncr-new" name="four_m" class="cell-input" placeholder="4M"></td>
                             <td><input type="text" form="ncr-new" name="type_of_defect" class="cell-input" placeholder="Type"></td>
                             <td><input type="text" form="ncr-new" name="defect_reason" class="cell-input" placeholder="Reason"></td>
-                            <td><input type="number" form="ncr-new" name="wo_quantity" class="cell-input" placeholder="0"></td>
-                            <td><input type="number" form="ncr-new" name="problem_quantity" class="cell-input" placeholder="0"></td>
-                            <td><input type="number" step="0.01" form="ncr-new" name="problem_rate" class="cell-input" placeholder="0"></td>
+                            <td><input type="number" form="ncr-new" name="wo_quantity" class="cell-input calc-qty" placeholder="0"></td>
+                            <td><input type="number" form="ncr-new" name="problem_quantity" class="cell-input calc-qty" placeholder="0"></td>
+                            <td><input type="number" step="0.01" form="ncr-new" name="problem_rate" class="cell-input rate-display" readonly placeholder="0.00"></td>
                             <td><input type="text" form="ncr-new" name="process_generated" class="cell-input" placeholder="Process"></td>
                             <td><input type="text" form="ncr-new" name="operator" class="cell-input" placeholder="Operator"></td>
                             <td><input type="text" form="ncr-new" name="processing_result" class="cell-input" placeholder="Processing"></td>
@@ -97,12 +110,12 @@
                                     <option value="closed">Closed</option>
                                 </select>
                             </td>
-                            <td><input type="text" form="ncr-new" name="reminder_1" class="cell-input" placeholder="Reminder"></td>
+                            <td><input type="text" form="ncr-new" name="reminder_1" class="cell-input date-input" placeholder="Reminder Date (DD-MM-YYYY)" autocomplete="off"></td>
                             <td><input type="text" form="ncr-new" name="completed_date" class="cell-input date-input" placeholder="DD-MM-YYYY" autocomplete="off"></td>
                             <td><button type="submit" form="ncr-new" class="btn btn-primary btn-sm">Save</button></td>
                         </tr>
                         {% for n in ncrs %}
-                        <tr>
+                        <tr class="{% if n.id in due_reminder_ids %}reminder-due-row{% endif %}">
                             <td><input type="text" form="ncr-{{ n.id }}" name="document_no" class="cell-input" value="{{ n.document_no }}"></td>
                             <td><input type="text" form="ncr-{{ n.id }}" name="date_of_creation" class="cell-input date-input" value="{{ n.date_of_creation.strftime('%d-%m-%Y') if n.date_of_creation else '' }}" autocomplete="off"></td>
                             <td><input type="text" form="ncr-{{ n.id }}" name="product" class="cell-input" value="{{ n.product }}"></td>
@@ -116,9 +129,9 @@
                             <td><input type="text" form="ncr-{{ n.id }}" name="four_m" class="cell-input" value="{{ n.four_m }}"></td>
                             <td><input type="text" form="ncr-{{ n.id }}" name="type_of_defect" class="cell-input" value="{{ n.type_of_defect }}"></td>
                             <td><input type="text" form="ncr-{{ n.id }}" name="defect_reason" class="cell-input" value="{{ n.defect_reason }}"></td>
-                            <td><input type="number" form="ncr-{{ n.id }}" name="wo_quantity" class="cell-input" value="{{ n.wo_quantity }}"></td>
-                            <td><input type="number" form="ncr-{{ n.id }}" name="problem_quantity" class="cell-input" value="{{ n.problem_quantity }}"></td>
-                            <td><input type="number" step="0.01" form="ncr-{{ n.id }}" name="problem_rate" class="cell-input" value="{{ n.problem_rate }}"></td>
+                            <td><input type="number" form="ncr-{{ n.id }}" name="wo_quantity" class="cell-input calc-qty" value="{{ n.wo_quantity }}"></td>
+                            <td><input type="number" form="ncr-{{ n.id }}" name="problem_quantity" class="cell-input calc-qty" value="{{ n.problem_quantity }}"></td>
+                            <td><input type="number" step="0.01" form="ncr-{{ n.id }}" name="problem_rate" class="cell-input rate-display" readonly value="{{ '%.2f'|format(n.problem_rate) if n.problem_rate is not none else '0.00' }}"></td>
                             <td><input type="text" form="ncr-{{ n.id }}" name="process_generated" class="cell-input" value="{{ n.process_generated }}"></td>
                             <td><input type="text" form="ncr-{{ n.id }}" name="operator" class="cell-input" value="{{ n.operator }}"></td>
                             <td><input type="text" form="ncr-{{ n.id }}" name="processing_result" class="cell-input" value="{{ n.processing_result }}"></td>
@@ -129,7 +142,7 @@
                                     <option value="closed" {% if n.status == 'closed' %}selected{% endif %}>Closed</option>
                                 </select>
                             </td>
-                            <td><input type="text" form="ncr-{{ n.id }}" name="reminder_1" class="cell-input" value="{{ n.reminder_1 or '' }}"></td>
+                            <td><input type="text" form="ncr-{{ n.id }}" name="reminder_1" class="cell-input date-input" value="{{ n.reminder_1 or '' }}" autocomplete="off"></td>
                             <td><input type="text" form="ncr-{{ n.id }}" name="completed_date" class="cell-input date-input" value="{{ n.completed_date.strftime('%d-%m-%Y') if n.completed_date else '' }}" autocomplete="off"></td>
                             <td><button type="submit" form="ncr-{{ n.id }}" class="btn btn-primary btn-sm">Save</button></td>
                         </tr>
@@ -146,6 +159,37 @@
         </div>
     </main>
 </div>
+
+<style>
+.rate-display { background:#f3f4f6; color:var(--text-light); font-weight:600; cursor:default; }
+.calc-qty::-webkit-inner-spin-button,
+.calc-qty::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.reminder-due-row { background:#fef2f2 !important; }
+.reminder-due-row td { border-top:2px solid var(--danger); }
+.reminder-banner {
+    position:fixed; top:20px; left:50%; transform:translateX(-50%);
+    z-index:10000; max-width:520px; width:90%;
+    background:#fff3f3; border:1px solid #fecaca; border-left:5px solid #dc2626;
+    border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.12);
+    animation:slideDown .4s cubic-bezier(.175,.885,.32,1.275);
+}
+.reminder-banner-content { display:flex; align-items:flex-start; gap:12px; padding:14px 18px; }
+.reminder-icon { font-size:20px; flex-shrink:0; margin-top:2px; }
+.reminder-banner-title { font-weight:700; color:#991b1b; font-size:14px; margin-bottom:6px; }
+.reminder-banner-list { font-size:13px; color:#450a0a; line-height:1.5; }
+.reminder-banner-list div { margin:2px 0; padding-left:14px; position:relative; }
+.reminder-banner-list div::before { content:'•'; position:absolute; left:0; color:#dc2626; font-weight:700; }
+.reminder-banner-close {
+    background:none; border:none; color:#dc2626; font-size:20px; font-weight:700;
+    cursor:pointer; padding:0; line-height:1; margin-left:auto;
+}
+.reminder-banner-close:hover { opacity:.7; }
+@keyframes slideDown {
+    from { transform:translateX(-50%) translateY(-20px); opacity:0; }
+    to { transform:translateX(-50%) translateY(0); opacity:1; }
+}
+</style>
+
 {% endblock %}
 
 {% block scripts %}
@@ -155,6 +199,52 @@ YG1.onReady(function() {
         dateFormat: 'd-m-Y',
         allowInput: true
     });
+
+    function calcProblemRate() {
+        document.querySelectorAll('input.calc-qty').forEach(function(input) {
+            var tr = input.closest('tr');
+            if (!tr) return;
+            var woQty = parseFloat(tr.querySelector('input[name="wo_quantity"]').value) || 0;
+            var probQty = parseFloat(tr.querySelector('input[name="problem_quantity"]').value) || 0;
+            var rateInput = tr.querySelector('input[name="problem_rate"]');
+            if (rateInput) {
+                rateInput.value = woQty > 0 ? ((probQty / woQty) * 100).toFixed(2) : '0.00';
+            }
+        });
+    }
+    document.querySelectorAll('input.calc-qty').forEach(function(input) {
+        input.addEventListener('input', calcProblemRate);
+    });
+
+    var dueReminders = [];
+    {% if due_reminders %}
+    {% for r in due_reminders %}
+    dueReminders.push({doc: '{{ r.doc }}', date: '{{ r.date }}'});
+    {% endfor %}
+    {% endif %}
+
+    function showReminderBanner() {
+        var banner = document.getElementById('ncr-reminder-banner');
+        if (!banner) return;
+        var list = document.getElementById('reminder-banner-list');
+        if (list) {
+            list.innerHTML = dueReminders.map(function(r) {
+                return '<div>NCR <strong>' + r.doc + '</strong> — reminder date ' + r.date + ' reached.</div>';
+            }).join('');
+        }
+        banner.style.display = 'block';
+    }
+
+    function closeReminderBanner() {
+        var banner = document.getElementById('ncr-reminder-banner');
+        if (banner) banner.style.display = 'none';
+    }
+
+    // Show banner on load
+    showReminderBanner();
+
+    // Re-show banner every 3 minutes while reminders are due
+    var reminderInterval = setInterval(showReminderBanner, 3 * 60 * 1000);
 });
 </script>
 {% endblock %}

@@ -8,7 +8,7 @@
         <div class="page-header">
             <div>
                 <h1>NCR Dashboard</h1>
-                <p>Non-Conformance Report dashboard overview</p>
+                <p>Non-Conformance Report reminders and overview</p>
             </div>
         </div>
 
@@ -17,7 +17,7 @@
             <div class="flash-container">
                 {% for category, message in messages %}
                 <div class="flash flash-{{ category }}">
-                    <span class="flash-icon">{% if category == 'success' %}?{% elif category == 'error' %}?{% elif category == 'warning' %}?{% else %}?{% endif %}</span>
+                    <span class="flash-icon">{% if category == 'success' %}✓{% elif category == 'error' %}✕{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}</span>
                     <span class="flash-text">{{ message }}</span>
                     <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
                 </div>
@@ -26,12 +26,55 @@
             {% endif %}
         {% endwith %}
 
-        <div class="card">
+        <div class="card ncr-dashboard-card">
+            <h3 style="margin:0 0 16px 0;">Upcoming NCR Reminders (within 1 day)</h3>
+            {% if upcoming_reminders %}
+            <table class="ncr-table">
+                <thead>
+                    <tr>
+                        <th>Document No</th>
+                        <th>Product</th>
+                        <th>Issued By</th>
+                        <th>Reminder Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in upcoming_reminders %}
+                    <tr class="reminder-due-row">
+                        <td>{{ r.doc }}</td>
+                        <td>{{ r.product }}</td>
+                        <td>{{ r.issued_by }}</td>
+                        <td>{{ r.date }}</td>
+                        <td style="color:#991b1b; font-weight:700;">REMINDER</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
             <div class="empty-state">
-                <div class="icon">??</div>
-                <p>NCR dashboard data will be shown here.</p>
+                <div class="icon">✓</div>
+                <p>No NCR reminders due within the next 1 day.</p>
             </div>
+            {% endif %}
         </div>
     </main>
 </div>
+
+<style>
+.ncr-dashboard-card { display:flex; flex-direction:column; gap:14px; }
+.ncr-table { width:100%; border-collapse:separate; border-spacing:0; font-family:'Roboto',sans-serif; font-size:13px; }
+.ncr-table th {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    color: var(--text-light); font-weight:700; text-transform:uppercase; font-size:11px; letter-spacing:.5px;
+    text-align:left; padding:11px 14px; border-bottom:2px solid var(--gray-border); white-space:nowrap;
+}
+.ncr-table td { border-bottom:1px solid var(--gray-border); padding:10px 12px; vertical-align:middle; background:#fff; }
+.ncr-table tbody tr:hover td { background:#f8fafc; }
+.reminder-due-row { background:#fef2f2 !important; }
+.reminder-due-row td { border-top:2px solid var(--danger); }
+.empty-state { text-align:center; padding:40px 20px; color:var(--text-light); }
+.empty-state .icon { font-size:32px; margin-bottom:10px; }
+</style>
+
 {% endblock %}

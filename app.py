@@ -986,8 +986,26 @@ def save_gemba_check_sheet():
 @app.route('/ncr-dashboard')
 @login_required
 def ncr_dashboard():
-    """NCR Dashboard - placeholder."""
-    return render_template('ncr_dashboard.html', now=datetime.utcnow())
+    """NCR Dashboard - shows upcoming NCR reminders within 1 day."""
+    today = date.today()
+    reminder_ahead = today + timedelta(days=1)
+    upcoming = []
+    for n in NCR.query.filter_by(status='open').order_by(NCR.created_at.desc()).all():
+        if n.reminder_1:
+            rdate = parse_date(n.reminder_1)
+            if rdate and rdate <= reminder_ahead:
+                upcoming.append({
+                    'id': n.id,
+                    'doc': n.document_no,
+                    'date': n.reminder_1,
+                    'product': n.product,
+                    'issued_by': n.issued_by,
+                })
+    return render_template(
+        'ncr_dashboard.html',
+        now=datetime.utcnow(),
+        upcoming_reminders=upcoming,
+    )
 
 
 @app.route('/ncr')
@@ -999,11 +1017,26 @@ def ncr():
     if document_no_query:
         query = query.filter(NCR.document_no.ilike(f'%{document_no_query}%'))
     ncrs = query.all()
+
+    today = date.today()
+    reminder_ahead = today + timedelta(days=1)
+    due_reminders = []
+    for n in ncrs:
+        if n.status == 'open' and n.reminder_1:
+            rdate = parse_date(n.reminder_1)
+            if rdate and rdate <= reminder_ahead:
+                due_reminders.append(n)
+    if due_reminders:
+        docs = ', '.join(n.document_no for n in due_reminders)
+        flash(f"Reminder: {len(due_reminders)} NCR(s) reminder date reached or within 1 day: {docs}", 'warning')
+
     return render_template(
         'ncr.html',
         ncrs=ncrs,
         document_no_query=document_no_query,
         now=datetime.utcnow(),
+        due_reminder_ids={n.id for n in due_reminders},
+        due_reminders=[{'id': n.id, 'doc': n.document_no, 'date': n.reminder_1} for n in due_reminders],
     )
 
 
@@ -1139,8 +1172,8 @@ def save_ncr():
     except ValueError:
         prob_qty_val = 0
     try:
-        prob_rate_val = float(problem_rate) if problem_rate else 0.0
-    except ValueError:
+        prob_rate_val = round((prob_qty_val / wo_qty_val) * 100, 2) if wo_qty_val > 0 else 0.0
+    except (ValueError, ZeroDivisionError):
         prob_rate_val = 0.0
 
     if not ncr:
@@ -1160,7 +1193,7 @@ def save_ncr():
             defect_reason=defect_reason,
             wo_quantity=wo_quantity,
             problem_quantity=problem_quantity,
-            problem_rate=problem_rate,
+            problem_rate=prob_rate_val,
             process_generated=process_generated,
             operator=operator,
             processing_result=processing_result,
@@ -1187,7 +1220,7 @@ def save_ncr():
         ncr.defect_reason = defect_reason
         ncr.wo_quantity = wo_quantity
         ncr.problem_quantity = problem_quantity
-        ncr.problem_rate = problem_rate
+        ncr.problem_rate = prob_rate_val
         ncr.process_generated = process_generated
         ncr.operator = operator
         ncr.processing_result = processing_result
